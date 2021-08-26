@@ -273,9 +273,9 @@ dependencies = [
 
 [[package]]
 name = "async-std"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9f06685bad74e0570f5213741bea82158279a4103d988e57bfada11ad230341"
+checksum = "f8056f1455169ab86dd47b47391e4ab0cbd25410a70e9fe675544f49bafaf952"
 dependencies = [
  "async-attributes",
  "async-channel",
@@ -316,6 +316,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "async-weighted-semaphore"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0c3c4e4764855498d3ee6554748ff2d9376bc4c937692e266a56dd4ac098cfb"
 
 [[package]]
 name = "atomic-waker"
@@ -960,6 +966,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "surf",
+ "surf-pool",
  "tide",
 ]
 
@@ -1162,9 +1169,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.100"
+version = "0.2.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1fa8cddc8fbbee11227ef194b5317ed014b8acbf15139bd716a18ad3fe99ec5"
+checksum = "3cb00336871be5ed2c8ed44b60ae9959dc5b9f08539422ed43f09e34ecaeba21"
 
 [[package]]
 name = "libnghttp2-sys"
@@ -1951,6 +1958,18 @@ dependencies = [
  "serde",
  "serde_json",
  "web-sys",
+]
+
+[[package]]
+name = "surf-pool"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "045c52db039a264200451f94d0e6cd67f47a7706998e082d449eca42aa345a08"
+dependencies = [
+ "async-std",
+ "async-weighted-semaphore",
+ "surf",
+ "thiserror",
 ]
 
 [[package]]
