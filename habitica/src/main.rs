@@ -3,16 +3,22 @@ mod habitica;
 const HABITICA_PORT: u16 = 9099;
 const HABITICA_KEY_ENV_VAR: &str = "HABITICA_API_KEY";
 const HABITICA_USER_ENV_VAR: &str = "HABITICA_API_USER";
+const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
+const CLIENT_ID: &str = "3f56b8ab-940c-40d6-8365-1d85b0e3b43d-Testing";
 use async_std::sync::{Arc, RwLock};
 use clap::Clap;
 use std::collections::HashMap;
 use std::str::FromStr;
+use surf_pool::SurfPool;
 use tide::log::*;
 
-#[derive(Debug, Default, Clone)]
+type TagCache = Arc<RwLock<HashMap<String, String>>>;
+
+#[derive(Debug, Clone)]
 struct HabiticaState {
     key: String,
     user: String,
+    pool: SurfPool,
     tag_cache: Arc<RwLock<HashMap<String, String>>>,
 }
 
@@ -20,17 +26,17 @@ struct HabiticaState {
 async fn main() -> tide::Result<()> {
     let opt: cli::Opt = cli::Opt::parse();
     tide::log::with_level(tide::log::LevelFilter::Debug);
-    let mut state = HabiticaState::default();
-    if let Ok(key) = std::env::var(HABITICA_KEY_ENV_VAR) {
-        state.key = key;
-    } else {
-        panic!("The env var {} is missing", HABITICA_KEY_ENV_VAR);
-    }
-    if let Ok(user) = std::env::var(HABITICA_USER_ENV_VAR) {
-        state.user = user;
-    } else {
-        panic!("The env var {} is missing", HABITICA_USER_ENV_VAR);
-    }
+    let key = std::env::var(HABITICA_KEY_ENV_VAR)
+        .unwrap_or_else(|_| panic!("The env var {} is missing", HABITICA_KEY_ENV_VAR));
+    let user = std::env::var(HABITICA_USER_ENV_VAR)
+        .unwrap_or_else(|_| panic!("The env var {} is missing", HABITICA_USER_ENV_VAR));
+    let pool = surf_pool::SurfPoolBuilder::new(1).unwrap().build().await;
+    let state = HabiticaState {
+        key,
+        user,
+        pool,
+        tag_cache: TagCache::default(),
+    };
 
     let fill_cache_state = state.clone();
     let mut app = tide::with_state(state);
@@ -140,8 +146,6 @@ async fn todos(req: tide::Request<HabiticaState>) -> tide::Result<String> {
     Ok(serde_json::to_string(&todos).unwrap())
 }
 
-const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
-const CLIENT_ID: &str = "3f56b8ab-940c-40d6-8365-1d85b0e3b43d-Testing";
 //async fn get_todo(state: &HabiticaState) -> tide::Result {
 //let mut todos = get_tasks_with_type(state, "todos").await?;
 //let dailys = get_tasks_with_type(state, "dailys").await?;
@@ -159,8 +163,9 @@ async fn get_tasks(
     let base_url = surf::Url::parse(BASE_URL_V3)?;
     let mut todo_url = base_url.join("tasks/user")?;
     todo_url.set_query(Some(&format!("type={}", task_type.to_string())));
-    let client = surf::Client::new();
-    let mut res = client
+    let handler = state.pool.get_handler().await.unwrap();
+    let mut res = handler
+        .get_client()
         .get(todo_url)
         .header("x-client", CLIENT_ID)
         .header("x-api-user", state.user.clone())
@@ -277,14 +282,16 @@ async fn replace_tag_id(todos: &mut [aide_proto::v1::todo::Todo], state: &Habiti
 async fn fill_tag_cache(state: HabiticaState) -> Result<(), Box<dyn std::error::Error>> {
     let base_url = surf::Url::parse(BASE_URL_V3)?;
     let tags_url = base_url.join("tags")?;
-    let client = surf::Client::new();
-    let mut res = client
+    let handler = state.pool.get_handler().await.unwrap();
+    let mut res = handler
+        .get_client()
         .get(tags_url)
         .header("x-client", CLIENT_ID)
         .header("x-api-user", state.user.clone())
         .header("x-api-key", state.key.clone())
         .send()
         .await?;
+    drop(handler);
     let resp_tags: habitica::RespTags = res.body_json().await?;
     let mut unlocked_cache = state.tag_cache.write().await;
     for tag in resp_tags.data.iter() {
