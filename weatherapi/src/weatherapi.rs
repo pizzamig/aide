@@ -96,47 +96,55 @@ use aide_proto::v1::weather::Forecast as AideForecast;
 impl From<ForecastResponse> for AideForecast {
     fn from(fr: ForecastResponse) -> Self {
         let mut days = fr.forecast.forecastday;
-        let today = days.pop().unwrap();
         let tomorrow = days.pop().unwrap();
+        let today = days.pop().unwrap();
         let current_epoch = fr.current.last_updated_epoch;
         let tomorrow_epoch = tomorrow.date_epoch;
         if tomorrow_epoch < current_epoch || (tomorrow_epoch - current_epoch) < 60 * 60 * 8 {
-            AideForecast::from(tomorrow.day)
+            get_aideforecast(tomorrow.date, tomorrow.day)
         } else {
-            AideForecast::from(today.day)
+            get_aideforecast(today.date, today.day)
         }
     }
 }
 
-impl From<Day> for AideForecast {
-    fn from(day: Day) -> Self {
-        AideForecast {
-            description: day.condition.text,
-            mintemp_c: day.mintemp_c,
-            maxtemp_c: day.maxtemp_c,
-            precip_mm: day.totalprecip_mm,
-            chance_of_rain: day.daily_chance_of_rain,
-            chance_of_snow: day.daily_chance_of_snow,
-        }
+fn get_aideforecast(date: String, day: Day) -> AideForecast {
+    AideForecast {
+        description: day.condition.text,
+        time: date,
+        mintemp_c: day.mintemp_c,
+        maxtemp_c: day.maxtemp_c,
+        precip_mm: day.totalprecip_mm,
+        chance_of_rain: day.daily_chance_of_rain,
+        chance_of_snow: day.daily_chance_of_snow,
     }
 }
 
 use aide_proto::v1::weather::HourRainForecast;
 impl From<ForecastResponse> for Vec<HourRainForecast> {
     fn from(fr: ForecastResponse) -> Self {
+        let current_epoch = fr.location.localtime_epoch;
         let mut days = fr.forecast.forecastday;
-        let today = days.pop().unwrap();
         let tomorrow = days.pop().unwrap();
+        let today = days.pop().unwrap();
         let mut hours: Vec<HourRainForecast> = today
             .hour
             .iter()
-            .filter(|x| x.time_epoch > today.date_epoch || today.date_epoch - x.time_epoch < 3600)
+            .filter(|x| x.time_epoch > current_epoch || current_epoch - x.time_epoch < 3600)
+            .filter(|x| {
+                x.will_it_rain == 1 /* yes */
+                || x.chance_of_rain > 30
+            })
             .map(HourRainForecast::from)
             .collect();
         hours.append(
             &mut tomorrow
                 .hour
                 .iter()
+                .filter(|x| {
+                    x.will_it_rain == 1 /* yes */
+                    || x.chance_of_rain > 30
+                })
                 .map(HourRainForecast::from)
                 .collect::<Vec<HourRainForecast>>(),
         );
