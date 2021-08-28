@@ -12,7 +12,7 @@ pub enum WeatherTypes {
     Rain,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct CurrentWeather {
     pub description: String,
     pub temp_c: f32,
@@ -21,8 +21,9 @@ pub struct CurrentWeather {
     pub precip_mm: f32,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Forecast {
+    pub time: String,
     pub description: String,
     pub mintemp_c: f32,
     pub maxtemp_c: f32,
@@ -31,7 +32,7 @@ pub struct Forecast {
     pub chance_of_snow: u8,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct HourRainForecast {
     pub time: String,
     pub temp_c: f32,
