@@ -2149,7 +2149,6 @@ dependencies = [
  "strum",
  "strum_macros",
  "surf",
- "tide",
 ]
 
 [[package]]
