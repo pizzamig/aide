@@ -18,8 +18,7 @@ structopt-flags = "0.3"
 strum = {version = "0.21", features = ["derive"]}
 strum_macros = "0.21"
 chrono = "0.4.19"
-clap = "3.0.0-beta.2"
+clap = "3.0.0-beta.4"
 
 [dependencies.aide-proto]
-version = "=0.1.0"
 path = "../aide-proto"
