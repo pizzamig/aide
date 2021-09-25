@@ -64,6 +64,7 @@ pub enum TaskTypes {
 pub struct Checklist {
     completed: bool,
     text: String,
+    #[allow(dead_code)]
     id: String,
 }
 
