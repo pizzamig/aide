@@ -14,6 +14,7 @@ pub enum WeatherTypes {
 
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct CurrentWeather {
+    pub location: String,
     pub description: String,
     pub temp_c: f32,
     pub feelslike_c: f32,
@@ -23,6 +24,7 @@ pub struct CurrentWeather {
 
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Forecast {
+    pub location: String,
     pub time: String,
     pub description: String,
     pub mintemp_c: f32,
@@ -30,6 +32,12 @@ pub struct Forecast {
     pub precip_mm: f32,
     pub chance_of_rain: u8,
     pub chance_of_snow: u8,
+}
+
+#[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
+pub struct RainForecast {
+    pub location: String,
+    pub hour_rain_forecast: Vec<HourRainForecast>,
 }
 
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]
