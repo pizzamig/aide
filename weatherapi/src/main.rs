@@ -19,9 +19,16 @@ async fn main() -> tide::Result<()> {
     let pool = surf_pool::SurfPoolBuilder::new(1).unwrap().build().await;
     let state = State { opt, pool };
     let mut app = tide::with_state(state);
+    app.at("/health").get(aide_proto::v1::always_ok_with_state);
+    app.at("/v1/health")
+        .get(aide_proto::v1::always_ok_with_state);
     app.at("/v1/current").get(current);
+    app.at("/v1/current/:location").get(current);
     app.at("/v1/forecast").get(forecast);
+    app.at("/v1/forecast/:location").get(forecast);
     app.at("/v1/hourrainforecast").get(hour_rain_forecast);
+    app.at("/v1/hourrainforecast/:location")
+        .get(hour_rain_forecast);
     let binded = format!("0.0.0.0:{}", WEATHERAPI_PORT);
     app.listen(binded).await?;
     Ok(())
