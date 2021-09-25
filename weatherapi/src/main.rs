@@ -95,6 +95,6 @@ async fn hour_rain_forecast(req: tide::Request<State>) -> tide::Result<String> {
     drop(handler);
     let resp_forecast: weatherapi::ForecastResponse = res.body_json().await.unwrap();
     //dbg!(&resp_forecast);
-    let result: Vec<aide_proto::v1::weather::HourRainForecast> = From::from(resp_forecast);
+    let result: aide_proto::v1::weather::RainForecast = From::from(resp_forecast);
     Ok(serde_json::to_string(&result).unwrap())
 }

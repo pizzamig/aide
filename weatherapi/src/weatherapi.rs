@@ -80,9 +80,19 @@ pub struct Hour {
 }
 
 use aide_proto::v1::weather::CurrentWeather;
+use std::fmt::Write as FmtWrite;
 impl From<ForecastResponse> for CurrentWeather {
     fn from(fr: ForecastResponse) -> Self {
+        let mut location = String::new();
+        write!(
+            &mut location,
+            "{} ({})",
+            fr.location.name, fr.location.country
+        )
+        .unwrap();
+
         CurrentWeather {
+            location,
             description: fr.current.condition.text,
             temp_c: fr.current.temp_c,
             feelslike_c: fr.current.feelslike_c,
@@ -95,21 +105,29 @@ impl From<ForecastResponse> for CurrentWeather {
 use aide_proto::v1::weather::Forecast as AideForecast;
 impl From<ForecastResponse> for AideForecast {
     fn from(fr: ForecastResponse) -> Self {
+        let mut location = String::new();
+        write!(
+            &mut location,
+            "{} ({})",
+            fr.location.name, fr.location.country
+        )
+        .unwrap();
         let mut days = fr.forecast.forecastday;
         let tomorrow = days.pop().unwrap();
         let today = days.pop().unwrap();
         let current_epoch = fr.current.last_updated_epoch;
         let tomorrow_epoch = tomorrow.date_epoch;
         if tomorrow_epoch < current_epoch || (tomorrow_epoch - current_epoch) < 60 * 60 * 8 {
-            get_aideforecast(tomorrow.date, tomorrow.day)
+            get_aideforecast(location, tomorrow.date, tomorrow.day)
         } else {
-            get_aideforecast(today.date, today.day)
+            get_aideforecast(location, today.date, today.day)
         }
     }
 }
 
-fn get_aideforecast(date: String, day: Day) -> AideForecast {
+fn get_aideforecast(location: String, date: String, day: Day) -> AideForecast {
     AideForecast {
+        location,
         description: day.condition.text,
         time: date,
         mintemp_c: day.mintemp_c,
@@ -120,9 +138,16 @@ fn get_aideforecast(date: String, day: Day) -> AideForecast {
     }
 }
 
-use aide_proto::v1::weather::HourRainForecast;
-impl From<ForecastResponse> for Vec<HourRainForecast> {
+use aide_proto::v1::weather::{HourRainForecast, RainForecast};
+impl From<ForecastResponse> for RainForecast {
     fn from(fr: ForecastResponse) -> Self {
+        let mut location = String::new();
+        write!(
+            &mut location,
+            "{} ({})",
+            fr.location.name, fr.location.country
+        )
+        .unwrap();
         let current_epoch = fr.location.localtime_epoch;
         let mut days = fr.forecast.forecastday;
         let tomorrow = days.pop().unwrap();
@@ -148,7 +173,10 @@ impl From<ForecastResponse> for Vec<HourRainForecast> {
                 .map(HourRainForecast::from)
                 .collect::<Vec<HourRainForecast>>(),
         );
-        hours
+        RainForecast {
+            location,
+            hour_rain_forecast: hours,
+        }
     }
 }
 
