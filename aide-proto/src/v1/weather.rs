@@ -1,15 +1,18 @@
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumString, EnumVariantNames};
 
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, EnumString, EnumVariantNames, Deserialize, Serialize,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, EnumString, EnumVariantNames, Deserialize, Serialize)]
 #[strum(ascii_case_insensitive)]
 pub enum WeatherTypes {
-    #[default]
     Current,
     Forecast,
     Rain,
+}
+
+impl Default for WeatherTypes {
+    fn default() -> Self {
+        WeatherTypes::Current
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Deserialize, Serialize)]

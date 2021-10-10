@@ -1,24 +1,32 @@
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumString, EnumVariantNames};
 
-#[derive(
-    Clone, Copy, Debug, Default, PartialEq, EnumString, EnumVariantNames, Deserialize, Serialize,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, EnumString, EnumVariantNames, Deserialize, Serialize)]
 #[strum(ascii_case_insensitive)]
 pub enum TodoTypes {
-    #[default]
     Task,
     Daily,
     Weekly,
 }
 
-#[derive(Debug, Default, PartialEq, EnumString, EnumVariantNames)]
+impl Default for TodoTypes {
+    fn default() -> Self {
+        TodoTypes::Task
+    }
+}
+
+#[derive(Debug, PartialEq, EnumString, EnumVariantNames)]
 #[strum(ascii_case_insensitive)]
 pub enum Day {
     Monday,
     Tuesday,
-    #[default]
     Sunday,
+}
+
+impl Default for Day {
+    fn default() -> Self {
+        Day::Sunday
+    }
 }
 
 // TODO convert due_date in a proper type
