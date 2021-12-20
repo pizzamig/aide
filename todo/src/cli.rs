@@ -12,6 +12,9 @@ pub struct Opt {
     /// Specify labels
     #[clap(short, long)]
     pub label: Option<String>,
+    /// Tcp port to be used (default 9099)
+    #[clap(short, long, default_value = "9099")]
+    pub port: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, EnumString)]
