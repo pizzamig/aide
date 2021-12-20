@@ -4,13 +4,13 @@ pub struct DataResponse {
     pub data: Vec<String>,
 }
 
-pub async fn always_ok() -> tide::Result<&'static str> {
-    Ok("OK")
-}
+//pub async fn always_ok() -> tide::Result<&'static str> {
+//Ok("OK")
+//}
 
-pub async fn always_ok_with_state<T>(_: T) -> tide::Result<&'static str> {
-    Ok("OK")
-}
+//pub async fn always_ok_with_state<T>(_: T) -> tide::Result<&'static str> {
+//Ok("OK")
+//}
 
 pub mod kind;
 pub use kind::GetModuleKindResponse;
