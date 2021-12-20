@@ -1,12 +1,11 @@
 mod cli;
 mod habitica;
-const HABITICA_PORT: u16 = 9099;
 const HABITICA_KEY_ENV_VAR: &str = "HABITICA_API_KEY";
 const HABITICA_USER_ENV_VAR: &str = "HABITICA_API_USER";
 const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
 const CLIENT_ID: &str = "3f56b8ab-940c-40d6-8365-1d85b0e3b43d-Testing";
 use async_std::sync::{Arc, RwLock};
-use clap::Clap;
+use clap::Parser;
 use std::collections::HashMap;
 use std::str::FromStr;
 use surf_pool::SurfPool;
@@ -40,7 +39,7 @@ async fn main() -> tide::Result<()> {
 
     let fill_cache_state = state.clone();
     let mut app = tide::with_state(state);
-    if opt.registration {
+    if opt.common_opt.registration {
         todo!("Registration not implemented yet!")
         //async_std::task::spawn(async { subscribe_module().await.unwrap_or(()) });
     }
@@ -51,7 +50,7 @@ async fn main() -> tide::Result<()> {
     app.at("/v1/labels").get(labels);
     app.at("/v1/labels/:label/todos").get(label_todos);
     app.at("/v1/todos").get(todos);
-    let binded = format!("0.0.0.0:{}", HABITICA_PORT);
+    let binded = format!("0.0.0.0:{}", opt.common_opt.port);
     app.listen(binded).await?;
     Ok(())
 }
