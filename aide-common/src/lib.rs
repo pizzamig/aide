@@ -1,6 +1,8 @@
 pub mod cli;
+pub mod http;
 
 pub use cli::CliCommonOpt;
+pub use http::http_404;
 
 #[cfg(test)]
 mod tests {
