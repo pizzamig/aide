@@ -1,11 +1,13 @@
 mod cli;
 mod habitica;
+mod habitica_aide;
 const HABITICA_KEY_ENV_VAR: &str = "HABITICA_API_KEY";
 const HABITICA_USER_ENV_VAR: &str = "HABITICA_API_USER";
 const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
 const CLIENT_ID: &str = "3f56b8ab-940c-40d6-8365-1d85b0e3b43d-Testing";
 use aide_common::{healthz, http_404};
 use clap::Parser;
+use habitica_aide::HabiticaState;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server};
 use std::collections::HashMap;
@@ -14,14 +16,6 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 type TagCache = Arc<RwLock<HashMap<String, String>>>;
-
-#[derive(Debug, Clone)]
-struct HabiticaState {
-    key: String,
-    user: String,
-    //pool: SurfPool,
-    tag_cache: Arc<RwLock<HashMap<String, String>>>,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -41,7 +35,7 @@ async fn main() -> Result<(), anyhow::Error> {
         tag_cache: TagCache::default(),
     };
 
-    fill_tag_cache(state.clone()).await?;
+    habitica_aide::fill_tag_cache(state.clone()).await?;
     let service = make_service_fn(|_| {
         let cloned_state = state.clone();
         async {
@@ -115,8 +109,10 @@ async fn type_todos(
         return Ok(http_404(&format!("Unrecognized word {}", path[1])));
     }
     use aide_proto::v1::todo::TodoTypes;
+    use habitica_aide::replace_tag_id;
     let type_str = path[0];
     if let Ok(todo_type) = TodoTypes::from_str(type_str) {
+        use habitica_aide::get_tag_id;
         match todo_type {
             TodoTypes::Task => {
                 let todos = get_tasks(&state, habitica::UsersTaskTypes::Todos).await?;
@@ -125,54 +121,45 @@ async fn type_todos(
                     .unwrap())
             }
             TodoTypes::Daily => {
-                let label = "daily";
-                let unlocked_cache = state.tag_cache.read().await;
-                // TODO: this unwrap can fail!
-                let tag_id = unlocked_cache
-                    .iter()
-                    .find(|(_k, v)| v == &label)
-                    .map(|(k, _)| k.to_string())
-                    .unwrap();
-                drop(unlocked_cache);
-                let dailys = get_tasks(&state, habitica::UsersTaskTypes::Dailys).await?;
-                let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
-                    .iter()
-                    .filter(|d| d.tags.iter().any(|t| t == &tag_id))
-                    .map(|d| {
-                        let mut owned_daily = d.to_owned();
-                        owned_daily.todo_type = todo_type;
-                        owned_daily
-                    })
-                    .collect();
-                replace_tag_id(&mut filtered_dailys, &state).await;
-                Ok(Response::builder()
-                    .body(Body::from(serde_json::to_string(&filtered_dailys).unwrap()))
-                    .unwrap())
+                if let Some(tag_id) = get_tag_id(&state, "daily").await {
+                    let dailys = get_tasks(&state, habitica::UsersTaskTypes::Dailys).await?;
+                    let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
+                        .iter()
+                        .filter(|d| d.tags.iter().any(|t| t == &tag_id))
+                        .map(|d| {
+                            let mut owned_daily = d.to_owned();
+                            owned_daily.todo_type = todo_type;
+                            owned_daily
+                        })
+                        .collect();
+                    replace_tag_id(&mut filtered_dailys, &state).await;
+                    Ok(Response::builder()
+                        .body(Body::from(serde_json::to_string(&filtered_dailys).unwrap()))
+                        .unwrap())
+                } else {
+                    Ok(http_404(&"daily label not found"))
+                }
             }
 
             TodoTypes::Weekly => {
-                let label = "weekly";
-                let unlocked_cache = state.tag_cache.read().await;
-                let tag_id = unlocked_cache
-                    .iter()
-                    .find(|(_k, v)| v == &label)
-                    .map(|(k, _)| k.to_string())
-                    .unwrap();
-                drop(unlocked_cache);
-                let dailys = get_tasks(&state, habitica::UsersTaskTypes::Dailys).await?;
-                let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
-                    .iter()
-                    .filter(|d| d.tags.iter().any(|t| t == &tag_id))
-                    .map(|d| {
-                        let mut owned_daily = d.to_owned();
-                        owned_daily.todo_type = todo_type;
-                        owned_daily
-                    })
-                    .collect();
-                replace_tag_id(&mut filtered_dailys, &state).await;
-                Ok(Response::builder()
-                    .body(Body::from(serde_json::to_string(&filtered_dailys).unwrap()))
-                    .unwrap())
+                if let Some(tag_id) = get_tag_id(&state, "weekly").await {
+                    let dailys = get_tasks(&state, habitica::UsersTaskTypes::Dailys).await?;
+                    let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
+                        .iter()
+                        .filter(|d| d.tags.iter().any(|t| t == &tag_id))
+                        .map(|d| {
+                            let mut owned_daily = d.to_owned();
+                            owned_daily.todo_type = todo_type;
+                            owned_daily
+                        })
+                        .collect();
+                    replace_tag_id(&mut filtered_dailys, &state).await;
+                    Ok(Response::builder()
+                        .body(Body::from(serde_json::to_string(&filtered_dailys).unwrap()))
+                        .unwrap())
+                } else {
+                    Ok(http_404(&"weekly label not found"))
+                }
             }
         }
     } else {
@@ -242,6 +229,7 @@ async fn label_todos(
     req: Request<Body>,
     state: HabiticaState,
 ) -> Result<Response<Body>, anyhow::Error> {
+    use habitica_aide::replace_tag_id;
     let path = req
         .uri()
         .path()
@@ -255,28 +243,25 @@ async fn label_todos(
     if path[1] != "todos" {
         return Ok(http_404(&format!("Unrecognized word {}", path[1])));
     }
-    let label = path[0];
-    let todos = get_all_tasks(&state).await?;
-    let unlocked_cache = state.tag_cache.read().await;
-    // the label can be missing
-    let tag_id = unlocked_cache
-        .iter()
-        .find(|(_k, v)| v == &label)
-        .map(|(k, _)| k.to_string())
-        .unwrap();
-    drop(unlocked_cache);
-    let mut filtered_todos: Vec<aide_proto::v1::todo::Todo> = todos
-        .iter()
-        .filter(|d| d.tags.iter().any(|t| t == &tag_id))
-        .map(|d| d.to_owned())
-        .collect();
-    replace_tag_id(&mut filtered_todos, &state).await;
-    Ok(Response::builder()
-        .body(Body::from(serde_json::to_string(&filtered_todos).unwrap()))
-        .unwrap())
+    use habitica_aide::get_tag_id;
+    if let Some(tag_id) = get_tag_id(&state, path[0]).await {
+        let todos = get_all_tasks(&state).await?;
+        let mut filtered_todos: Vec<aide_proto::v1::todo::Todo> = todos
+            .iter()
+            .filter(|d| d.tags.iter().any(|t| t == &tag_id))
+            .map(|d| d.to_owned())
+            .collect();
+        replace_tag_id(&mut filtered_todos, &state).await;
+        Ok(Response::builder()
+            .body(Body::from(serde_json::to_string(&filtered_todos).unwrap()))
+            .unwrap())
+    } else {
+        Ok(http_404(&format!("label {} not found", path[0])))
+    }
 }
 
 async fn todos(req: Request<Body>, state: HabiticaState) -> Result<Response<Body>, anyhow::Error> {
+    use habitica_aide::replace_tag_id;
     if req.uri().path() == "/v1/todos" {
         let mut todos = get_all_tasks(&state).await?;
         replace_tag_id(&mut todos, &state).await;
@@ -376,35 +361,6 @@ async fn get_all_tasks(
 //Ok(todos)
 //}
 //}
-
-async fn replace_tag_id(todos: &mut [aide_proto::v1::todo::Todo], state: &HabiticaState) {
-    for t in todos {
-        let tags_unlocked = state.tag_cache.read().await;
-        for tag in t.tags.iter_mut() {
-            if tags_unlocked.contains_key(tag) {
-                *tag = tags_unlocked.get(tag).unwrap().clone();
-            }
-        }
-    }
-}
-async fn fill_tag_cache(state: HabiticaState) -> Result<(), anyhow::Error> {
-    let base_url = surf::Url::parse(BASE_URL_V3)?;
-    let tags_url = base_url.join("tags")?;
-    let client = reqwest::Client::new();
-    let response = client
-        .get(tags_url)
-        .header("x-client", CLIENT_ID)
-        .header("x-api-user", state.user.clone())
-        .header("x-api-key", state.key.clone())
-        .send()
-        .await?;
-    let resp_tags: habitica::RespTags = response.json().await?;
-    let mut unlocked_cache = state.tag_cache.write().await;
-    for tag in resp_tags.data.iter() {
-        unlocked_cache.insert(tag.id.clone(), tag.name.clone());
-    }
-    Ok(())
-}
 
 //async fn subscribe_module() -> Result<(), Box<dyn std::error::Error>> {
 //let web_hook = format!("http://0.0.0.0:{}", HABITICA_PORT);
