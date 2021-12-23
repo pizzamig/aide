@@ -1,7 +1,7 @@
-use clap::Clap;
+use clap::Parser;
 use strum_macros::EnumString;
 
-#[derive(Clap, Clone)]
+#[derive(Parser, Clone)]
 pub struct Opt {
     /// One between: current, forecast, rain, all
     #[clap(short, long)]

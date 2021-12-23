@@ -1,7 +1,7 @@
 mod cli;
 mod weatherapi;
 
-use clap::Clap;
+use clap::Parser;
 use surf_pool::SurfPool;
 const WEATHERAPI_PORT: u16 = 9091;
 
@@ -19,9 +19,8 @@ async fn main() -> tide::Result<()> {
     let pool = surf_pool::SurfPoolBuilder::new(1).unwrap().build().await;
     let state = State { opt, pool };
     let mut app = tide::with_state(state);
-    app.at("/health").get(aide_proto::v1::always_ok_with_state);
-    app.at("/v1/health")
-        .get(aide_proto::v1::always_ok_with_state);
+    app.at("/health").get(always_ok_with_state);
+    app.at("/v1/health").get(always_ok_with_state);
     app.at("/v1/current").get(current);
     app.at("/v1/current/:location").get(current);
     app.at("/v1/forecast").get(forecast);
@@ -32,6 +31,9 @@ async fn main() -> tide::Result<()> {
     let binded = format!("0.0.0.0:{}", WEATHERAPI_PORT);
     app.listen(binded).await?;
     Ok(())
+}
+async fn always_ok_with_state<T>(_: T) -> tide::Result<&'static str> {
+    Ok("OK")
 }
 
 async fn current(req: tide::Request<State>) -> tide::Result<String> {

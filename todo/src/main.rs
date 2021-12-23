@@ -1,7 +1,7 @@
 mod cli;
 
 use aide_proto::v1::Todo as AideTodo;
-use clap::Clap;
+use clap::Parser;
 
 fn print_todo(t: &&AideTodo) {
     let type_symbol = match t.todo_type {

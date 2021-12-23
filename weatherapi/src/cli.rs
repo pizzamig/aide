@@ -1,10 +1,11 @@
-use clap::Clap;
+use clap::Parser;
 
-#[derive(Clap, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct Opt {
     #[clap(short = 'R', long)]
     /// Register to aide as todo plugin
     pub registration: bool,
+    //#[clap(short = 'K', long, hide_env_values = true, env = "WEATHERAPI_API_KEY")]
     #[clap(short = 'K', long, hide_env_values = true, env = "WEATHERAPI_API_KEY")]
     /// The API key to authenticate to the weather api service
     pub key: String,
