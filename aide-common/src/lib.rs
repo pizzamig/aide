@@ -1,7 +1,8 @@
 pub mod cli;
-pub mod http;
-
 pub use cli::CliCommonOpt;
+
+pub mod http;
+pub use http::healthz;
 pub use http::http_404;
 
 #[cfg(test)]

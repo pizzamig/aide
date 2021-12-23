@@ -7,3 +7,7 @@ pub fn http_404<T: ToString>(s: &T) -> Response<Body> {
         .body(Body::from(s.to_string()))
         .unwrap()
 }
+
+pub fn healthz() -> Response<Body> {
+    hyper::Response::new(Body::from("OK"))
+}
