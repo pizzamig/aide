@@ -52,3 +52,43 @@ pub async fn get_tag_id<'a, 'b>(state: &HabiticaState, label: &str) -> Option<St
         .find(|(_k, v)| *v == label)
         .map(|(k, _)| k.clone())
 }
+
+use super::habitica::{RespDaily, RespTask, UsersTaskTypes};
+
+pub async fn get_tasks(
+    state: &HabiticaState,
+    task_type: UsersTaskTypes,
+) -> Result<Vec<aide_proto::v1::todo::Todo>, anyhow::Error> {
+    let base_url = reqwest::Url::parse(BASE_URL_V3).unwrap();
+    let mut todo_url = base_url.join("tasks/user").unwrap();
+    todo_url.set_query(Some(&format!("type={}", task_type.to_string())));
+    let client = reqwest::Client::new();
+    let response = client
+        .get(todo_url)
+        .header("x-client", CLIENT_ID)
+        .header("x-api-user", state.user.clone())
+        .header("x-api-key", state.key.clone())
+        .send()
+        .await?;
+    match task_type {
+        UsersTaskTypes::Dailys => {
+            let resp_daily: RespDaily = response.json().await?;
+            let todos: Vec<aide_proto::v1::todo::Todo> = resp_daily
+                .data
+                .iter()
+                .filter(|d| d.is_due())
+                .map(|t| t.into())
+                .collect();
+            //debug!("received from habitica {} todos", todos.len());
+            Ok(todos)
+        }
+        UsersTaskTypes::Todos => {
+            let resp_task: RespTask = response.json().await?;
+            let todos: Vec<aide_proto::v1::todo::Todo> =
+                resp_task.data.iter().map(|t| t.into()).collect();
+            //debug!("received from habitica {} todos", todos.len());
+            Ok(todos)
+        }
+        _ => Ok(vec![]),
+    }
+}
