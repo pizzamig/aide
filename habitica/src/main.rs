@@ -6,7 +6,7 @@ const HABITICA_USER_ENV_VAR: &str = "HABITICA_API_USER";
 const CLIENT_ID_ENV_VAR: &str = "HABITICA_CLIENT_ID";
 use aide_common::{healthz, http_404};
 use clap::Parser;
-use habitica_aide::{get_tasks, HabiticaState};
+use habitica_aide::{get_all_tasks, get_tasks, HabiticaState};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server};
 use std::collections::HashMap;
@@ -247,43 +247,6 @@ async fn todos(req: Request<Body>, state: HabiticaState) -> Result<Response<Body
 //let todo_reply = aide_proto::v1::TodoReplyType::GetTodo(get_todo_reply);
 //Ok(serde_json::to_string(&todo_reply).unwrap().into())
 //}
-
-async fn get_all_tasks(
-    state: &HabiticaState,
-) -> Result<Vec<aide_proto::v1::todo::Todo>, anyhow::Error> {
-    let mut result = get_tasks(state, habitica::UsersTaskTypes::Todos).await?;
-    let dailys = get_tasks(state, habitica::UsersTaskTypes::Dailys).await?;
-    let unlocked_cache = state.tag_cache.read().await;
-    // TODO: daily or weekly can be missed!
-    let daily_tag_id = unlocked_cache
-        .iter()
-        .find(|(_k, v)| v.as_str() == "daily")
-        .map(|(k, _)| k.to_string())
-        .unwrap();
-    let weekly_tag_id = unlocked_cache
-        .iter()
-        .find(|(_k, v)| v.as_str() == "weekly")
-        .map(|(k, _)| k.to_string())
-        .unwrap();
-    drop(unlocked_cache);
-    let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
-        .iter()
-        .filter(|d| {
-            d.tags
-                .iter()
-                .any(|t| t == &daily_tag_id || t == &weekly_tag_id)
-        })
-        .map(|d| {
-            let mut new_daily = d.to_owned();
-            if new_daily.tags.contains(&weekly_tag_id) {
-                new_daily.todo_type = aide_proto::v1::todo::TodoTypes::Weekly;
-            }
-            new_daily
-        })
-        .collect();
-    result.append(&mut filtered_dailys);
-    Ok(result)
-}
 
 //async fn _get_tasks_with_type(
 //state: &HabiticaState,

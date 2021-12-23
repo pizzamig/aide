@@ -92,3 +92,29 @@ pub async fn get_tasks(
         _ => Ok(vec![]),
     }
 }
+
+pub async fn get_all_tasks(
+    state: &HabiticaState,
+) -> Result<Vec<aide_proto::v1::todo::Todo>, anyhow::Error> {
+    let mut result = get_tasks(state, UsersTaskTypes::Todos).await?;
+    let dailys = get_tasks(state, UsersTaskTypes::Dailys).await?;
+    let daily_tag_id = get_tag_id(state, "daily").await.unwrap_or_default();
+    let weekly_tag_id = get_tag_id(state, "weekly").await.unwrap_or_default();
+    let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
+        .iter()
+        .filter(|d| {
+            d.tags
+                .iter()
+                .any(|t| t == &daily_tag_id || t == &weekly_tag_id)
+        })
+        .map(|d| {
+            let mut new_daily = d.to_owned();
+            if new_daily.tags.contains(&weekly_tag_id) {
+                new_daily.todo_type = aide_proto::v1::todo::TodoTypes::Weekly;
+            }
+            new_daily
+        })
+        .collect();
+    result.append(&mut filtered_dailys);
+    Ok(result)
+}
