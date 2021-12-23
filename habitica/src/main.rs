@@ -4,7 +4,7 @@ const HABITICA_KEY_ENV_VAR: &str = "HABITICA_API_KEY";
 const HABITICA_USER_ENV_VAR: &str = "HABITICA_API_USER";
 const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
 const CLIENT_ID: &str = "3f56b8ab-940c-40d6-8365-1d85b0e3b43d-Testing";
-use aide_common::http_404;
+use aide_common::{healthz, http_404};
 use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server};
@@ -44,8 +44,7 @@ async fn main() -> Result<(), anyhow::Error> {
     fill_tag_cache(state.clone()).await?;
     let service = make_service_fn(|_| {
         let cloned_state = state.clone();
-
-        async move {
+        async {
             Ok::<_, hyper::Error>(service_fn(move |req| {
                 habitica_svc(req, cloned_state.clone())
             }))
@@ -66,13 +65,11 @@ async fn habitica_svc(
     req: Request<Body>,
     state: HabiticaState,
 ) -> Result<Response<Body>, anyhow::Error> {
-    //app.at("/v1/types").get(types);
-    //app.at("/v1/types/:type/todos").get(type_todos);
-    //app.at("/v1/labels").get(labels);
-    //app.at("/v1/labels/:label/todos").get(label_todos);
-    //app.at("/v1/todos").get(todos);
     if req.method() != Method::GET {
         return Ok(http_404(&"The only method supported is GET"));
+    }
+    if req.uri().path() == "/healthz" {
+        return Ok(healthz());
     }
     if !req.uri().path().starts_with("/v1") {
         return Ok(http_404(&"Invalid path"));
