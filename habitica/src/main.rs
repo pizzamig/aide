@@ -32,6 +32,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let state = HabiticaState {
         key,
         user,
+        client_id,
         //pool,
         tag_cache: TagCache::default(),
     };

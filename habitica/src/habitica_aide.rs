@@ -1,5 +1,4 @@
 const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
-const CLIENT_ID: &str = "3f56b8ab-940c-40d6-8365-1d85b0e3b43d-Testing";
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -11,6 +10,7 @@ type TagCache = Arc<RwLock<HashMap<String, String>>>;
 pub struct HabiticaState {
     pub key: String,
     pub user: String,
+    pub client_id: String,
     //pub pool: SurfPool,
     pub tag_cache: TagCache,
 }
@@ -21,7 +21,7 @@ pub async fn fill_tag_cache(state: HabiticaState) -> Result<(), anyhow::Error> {
     let client = reqwest::Client::new();
     let response = client
         .get(tags_url)
-        .header("x-client", CLIENT_ID)
+        .header("x-client", state.client_id.clone())
         .header("x-api-user", state.user.clone())
         .header("x-api-key", state.key.clone())
         .send()
@@ -65,7 +65,7 @@ pub async fn get_tasks(
     let client = reqwest::Client::new();
     let response = client
         .get(todo_url)
-        .header("x-client", CLIENT_ID)
+        .header("x-client", state.client_id.clone())
         .header("x-api-user", state.user.clone())
         .header("x-api-key", state.key.clone())
         .send()
