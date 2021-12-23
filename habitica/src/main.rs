@@ -3,11 +3,10 @@ mod habitica;
 mod habitica_aide;
 const HABITICA_KEY_ENV_VAR: &str = "HABITICA_API_KEY";
 const HABITICA_USER_ENV_VAR: &str = "HABITICA_API_USER";
-const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
-const CLIENT_ID: &str = "3f56b8ab-940c-40d6-8365-1d85b0e3b43d-Testing";
+const CLIENT_ID_ENV_VAR: &str = "HABITICA_CLIENT_ID";
 use aide_common::{healthz, http_404};
 use clap::Parser;
-use habitica_aide::HabiticaState;
+use habitica_aide::{get_tasks, HabiticaState};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server};
 use std::collections::HashMap;
@@ -26,6 +25,8 @@ async fn main() -> Result<(), anyhow::Error> {
         .unwrap_or_else(|_| panic!("The env var {} is missing", HABITICA_KEY_ENV_VAR));
     let user = std::env::var(HABITICA_USER_ENV_VAR)
         .unwrap_or_else(|_| panic!("The env var {} is missing", HABITICA_USER_ENV_VAR));
+    let client_id = std::env::var(CLIENT_ID_ENV_VAR)
+        .unwrap_or_else(|_| panic!("the env var {} is missing", CLIENT_ID_ENV_VAR));
     // TODO connection pool
     //let pool = surf_pool::SurfPoolBuilder::new(1).unwrap().build().await;
     let state = HabiticaState {
@@ -164,45 +165,6 @@ async fn type_todos(
         }
     } else {
         return Ok(http_404(&format!("Type not supported: {}", type_str)));
-    }
-}
-
-async fn get_tasks(
-    state: &HabiticaState,
-    task_type: habitica::UsersTaskTypes,
-) -> Result<Vec<aide_proto::v1::todo::Todo>, anyhow::Error> {
-    use habitica::UsersTaskTypes;
-    let base_url = reqwest::Url::parse(BASE_URL_V3).unwrap();
-    let mut todo_url = base_url.join("tasks/user").unwrap();
-    todo_url.set_query(Some(&format!("type={}", task_type.to_string())));
-    let client = reqwest::Client::new();
-    let response = client
-        .get(todo_url)
-        .header("x-client", CLIENT_ID)
-        .header("x-api-user", state.user.clone())
-        .header("x-api-key", state.key.clone())
-        .send()
-        .await?;
-    match task_type {
-        UsersTaskTypes::Dailys => {
-            let resp_daily: habitica::RespDaily = response.json().await?;
-            let todos: Vec<aide_proto::v1::todo::Todo> = resp_daily
-                .data
-                .iter()
-                .filter(|d| d.is_due())
-                .map(|t| t.into())
-                .collect();
-            //debug!("received from habitica {} todos", todos.len());
-            Ok(todos)
-        }
-        UsersTaskTypes::Todos => {
-            let resp_task: habitica::RespTask = response.json().await?;
-            let todos: Vec<aide_proto::v1::todo::Todo> =
-                resp_task.data.iter().map(|t| t.into()).collect();
-            //debug!("received from habitica {} todos", todos.len());
-            Ok(todos)
-        }
-        _ => Ok(vec![]),
     }
 }
 
