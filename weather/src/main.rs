@@ -20,7 +20,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
 fn get_base_url(opt: &cli::Opt) -> Result<reqwest::Url, anyhow::Error> {
     let base_url = reqwest::Url::parse(&format!(
-        "http://{}:{}",
+        "http://{}:{}/v1/",
         opt.host_addr.to_string(),
         opt.port
     ))?;
