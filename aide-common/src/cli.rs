@@ -35,3 +35,13 @@ pub struct CliCommonOpt {
     /// Force http to connect to the server [default: false]
     pub notls: bool,
 }
+
+impl CliCommonOpt {
+    pub fn get_proto_str(&self) -> &'static str {
+        if self.notls {
+            "http"
+        } else {
+            "https"
+        }
+    }
+}
