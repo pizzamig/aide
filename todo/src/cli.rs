@@ -4,8 +4,6 @@ use strum_macros::EnumString;
 
 #[derive(Parser, Clone)]
 pub struct Opt {
-    //#[clap(short, long)]
-    //verbose: bool,
     #[clap(short, long)]
     /// Optional parameter to get only one type of todos
     /// Available types are: daily, weekly, task, periodic

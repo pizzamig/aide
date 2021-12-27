@@ -19,17 +19,12 @@ type TagCache = Arc<RwLock<HashMap<String, String>>>;
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let opt: cli::Opt = cli::Opt::parse();
-    // TODO log
-    //tide::log::with_level(tide::log::LevelFilter::Debug);
     let key = std::env::var(HABITICA_KEY_ENV_VAR)
         .unwrap_or_else(|_| panic!("The env var {} is missing", HABITICA_KEY_ENV_VAR));
     let user = std::env::var(HABITICA_USER_ENV_VAR)
         .unwrap_or_else(|_| panic!("The env var {} is missing", HABITICA_USER_ENV_VAR));
     let client_id = std::env::var(CLIENT_ID_ENV_VAR)
         .unwrap_or_else(|_| panic!("the env var {} is missing", CLIENT_ID_ENV_VAR));
-    // TODO connection pool
-    //let pool = surf_pool::SurfPoolBuilder::new(1).unwrap().build().await;
-    let state = HabiticaState {
         key,
         user,
         client_id,
@@ -83,7 +78,6 @@ async fn types(req: Request<Body>, state: HabiticaState) -> Result<Response<Body
     use aide_proto::v1::{todo::TodoTypes, DataResponseRef};
     use strum::VariantNames;
     if req.uri().path() == "/v1/types" {
-        //let data: Vec<_> = TodoTypes::VARIANTS.iter().copied().collect();
         let data = TodoTypes::VARIANTS.to_vec();
         let response = DataResponseRef { data };
         Ok(Response::new(Body::from(
