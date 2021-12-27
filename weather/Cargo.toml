@@ -17,3 +17,6 @@ anyhow = "1.0.52"
 
 [dependencies.aide-proto]
 path = "../aide-proto"
+
+[dependencies.aide-common]
+path = "../aide-common"
