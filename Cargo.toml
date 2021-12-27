@@ -1,4 +1,4 @@
 [workspace]
 
-members = [ "aide", "aide-proxy", "aide-proto", "todo", "habitica", "weather", "weatherapi" ]
+members = [ "aide", "aide-common", "aide-proxy", "aide-proto", "todo", "habitica", "weather", "weatherapi" ]
 exclude = [ "telegram" ]

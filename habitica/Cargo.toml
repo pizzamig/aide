@@ -18,7 +18,15 @@ structopt-flags = "0.3"
 strum = {version = "0.21", features = ["derive"]}
 strum_macros = "0.21"
 chrono = "0.4.19"
-clap = "3.0.0-beta.4"
+clap = { version = "3.0.0-rc.7", features = ["derive"] }
+hyper = { version = "0.14", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11.8", features = ["default-tls", "gzip", "brotli", "json" ]}
+anyhow = "1.0.51"
+
 
 [dependencies.aide-proto]
 path = "../aide-proto"
+
+[dependencies.aide-common]
+path = "../aide-common"

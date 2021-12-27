@@ -1,8 +1,7 @@
-use clap::Clap;
+use clap::Parser;
 
-#[derive(Clap, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct Opt {
-    #[clap(short = 'R', long)]
-    /// Register to aide as todo plugin
-    pub registration: bool,
+    #[clap(flatten)]
+    pub common_opt: aide_common::CliCommonOpt,
 }

@@ -1,6 +1,6 @@
 mod cli;
 
-use clap::Clap;
+use clap::Parser;
 
 const BASE_URL: &str = "http://localhost:9091/v1/";
 
