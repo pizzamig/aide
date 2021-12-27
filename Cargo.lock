@@ -2810,13 +2810,14 @@ name = "weather"
 version = "0.1.0"
 dependencies = [
  "aide-proto",
- "async-std",
+ "anyhow",
  "clap 3.0.0-rc.7",
+ "reqwest",
  "serde",
  "serde_json",
  "strum",
  "strum_macros",
- "surf",
+ "tokio",
 ]
 
 [[package]]
