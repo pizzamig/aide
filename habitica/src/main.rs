@@ -83,7 +83,8 @@ async fn types(req: Request<Body>, state: HabiticaState) -> Result<Response<Body
     use aide_proto::v1::{todo::TodoTypes, DataResponseRef};
     use strum::VariantNames;
     if req.uri().path() == "/v1/types" {
-        let data: Vec<_> = TodoTypes::VARIANTS.iter().copied().collect();
+        //let data: Vec<_> = TodoTypes::VARIANTS.iter().copied().collect();
+        let data = TodoTypes::VARIANTS.to_vec();
         let response = DataResponseRef { data };
         Ok(Response::new(Body::from(
             serde_json::to_string(&response).unwrap(),
