@@ -1,5 +1,6 @@
 pub mod cli;
 pub use cli::CliCommonOpt;
+pub use cli::CommonOpt;
 
 pub mod http;
 pub use http::healthz;

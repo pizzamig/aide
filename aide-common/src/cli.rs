@@ -2,7 +2,7 @@ use clap::Parser;
 use std::net::IpAddr;
 
 #[derive(Parser, Clone, Debug)]
-pub struct CliCommonOpt {
+pub struct CommonOpt {
     #[clap(short = 'R', long)]
     /// Register to aide as plugin
     pub registration: bool,
