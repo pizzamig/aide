@@ -37,35 +37,46 @@ fn get_todos_count(v: &[&AideTodo]) -> i32 {
     result
 }
 
-#[async_std::main]
-async fn main() -> surf::Result<()> {
+#[tokio::main]
+async fn main() -> Result<(), anyhow::Error> {
     let opt: cli::Opt = cli::Opt::parse();
+    let base_url = reqwest::Url::parse(&format!(
+        "http://{}:{}",
+        opt.host_addr.to_string(),
+        opt.port
+    ))?;
     let todos: Vec<AideTodo> = if opt.todo_type.is_some() {
         match opt.todo_type.unwrap() {
             cli::TodoTypes::Task => {
-                let mut res = surf::get("http://localhost:9099/v1/types/task/todos").await?;
-                res.body_json().await?
+                let url = base_url.join("v1/types/task/todos")?;
+                let res = reqwest::get(url).await?;
+                res.json().await?
             }
             cli::TodoTypes::Daily => {
-                let mut res = surf::get("http://localhost:9099/v1/types/daily/todos").await?;
-                res.body_json().await?
+                let url = base_url.join("v1/types/daily/todos")?;
+                let res = reqwest::get(url).await?;
+                res.json().await?
             }
             cli::TodoTypes::Weekly => {
-                let mut res = surf::get("http://localhost:9099/v1/types/weekly/todos").await?;
-                res.body_json().await?
+                let url = base_url.join("v1/types/weekly/todos")?;
+                let res = reqwest::get(url).await?;
+                res.json().await?
             }
             cli::TodoTypes::Periodic => {
-                let mut res = surf::get("http://localhost:9099/v1/types/daily/todos").await?;
-                let mut todos: Vec<AideTodo> = res.body_json().await?;
-                let mut res = surf::get("http://localhost:9099/v1/types/weekly/todos").await?;
-                let mut temp_todos: Vec<AideTodo> = res.body_json().await?;
+                let url = base_url.join("v1/types/daily/todos")?;
+                let res = reqwest::get(url).await?;
+                let mut todos: Vec<AideTodo> = res.json().await?;
+                let url = base_url.join("v1/types/weekly/todos")?;
+                let res = reqwest::get(url).await?;
+                let mut temp_todos: Vec<AideTodo> = res.json().await?;
                 todos.append(&mut temp_todos);
                 todos
             }
         }
     } else {
-        let mut res = surf::get("http://localhost:9099/v1/todos").await?;
-        res.body_json().await?
+        let url = base_url.join("v1/todos")?;
+        let res = reqwest::get(url).await?;
+        res.json().await?
     };
     let temp_todos: Vec<&AideTodo> = if let Some(label) = opt.label {
         todos.iter().filter(|t| t.tags.contains(&label)).collect()
