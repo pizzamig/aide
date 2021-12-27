@@ -2824,14 +2824,15 @@ dependencies = [
 name = "weatherapi"
 version = "0.1.0"
 dependencies = [
+ "aide-common",
  "aide-proto",
- "async-std",
+ "anyhow",
  "clap 3.0.0-rc.7",
+ "hyper",
+ "reqwest",
  "serde",
  "serde_json",
- "surf",
- "surf-pool",
- "tide",
+ "tokio",
 ]
 
 [[package]]

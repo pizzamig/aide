@@ -1,46 +1,81 @@
 mod cli;
 mod weatherapi;
-
-use clap::Parser;
-use surf_pool::SurfPool;
 const WEATHERAPI_PORT: u16 = 9091;
 
+use aide_common::{healthz, http_404};
+use clap::Parser;
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Request, Response, Server};
 #[derive(Clone, Debug)]
 struct State {
     opt: cli::Opt,
-    pool: SurfPool,
+    //pool: SurfPool,
 }
 
-#[async_std::main]
-async fn main() -> tide::Result<()> {
+#[tokio::main]
+async fn main() -> Result<(), anyhow::Error> {
     let opt = cli::Opt::parse();
-    tide::log::with_level(tide::log::LevelFilter::Debug);
+    if opt.registration {
+        todo!("Registration not implemented yet!")
+    }
 
-    let pool = surf_pool::SurfPoolBuilder::new(1).unwrap().build().await;
-    let state = State { opt, pool };
-    let mut app = tide::with_state(state);
-    app.at("/health").get(always_ok_with_state);
-    app.at("/v1/health").get(always_ok_with_state);
-    app.at("/v1/current").get(current);
-    app.at("/v1/current/:location").get(current);
-    app.at("/v1/forecast").get(forecast);
-    app.at("/v1/forecast/:location").get(forecast);
-    app.at("/v1/hourrainforecast").get(hour_rain_forecast);
-    app.at("/v1/hourrainforecast/:location")
-        .get(hour_rain_forecast);
-    let binded = format!("0.0.0.0:{}", WEATHERAPI_PORT);
-    app.listen(binded).await?;
+    let state = State { opt };
+    let service = make_service_fn(|_| {
+        let cloned_state = state.clone();
+        async {
+            Ok::<_, hyper::Error>(service_fn(move |req| {
+                weatherapi_svc(req, cloned_state.clone())
+            }))
+        }
+    });
+
+    //let socket_addr = std::net::SocketAddr::new(opt.common_opt.host_addr, opt.common_opt.port);
+    use std::net::{IpAddr, Ipv4Addr};
+    let socket_addr =
+        std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), WEATHERAPI_PORT);
+    let server = Server::bind(&socket_addr).serve(service);
+    server.await?;
     Ok(())
 }
-async fn always_ok_with_state<T>(_: T) -> tide::Result<&'static str> {
-    Ok("OK")
+
+async fn weatherapi_svc(req: Request<Body>, state: State) -> Result<Response<Body>, anyhow::Error> {
+    if req.method() != hyper::Method::GET {
+        return Ok(http_404(&"The only method supported is GET"));
+    }
+    if req.uri().path() == "/healthz" {
+        return Ok(healthz());
+    }
+    if !req.uri().path().starts_with("/v1") {
+        return Ok(http_404(&"Invalid path"));
+    }
+    if req.uri().path().starts_with("/v1/current") {
+        return current(req, state).await;
+    } else if req.uri().path().starts_with("/v1/forecast") {
+        return forecast(req, state).await;
+    } else if req.uri().path().starts_with("/v1/hourrainforecast") {
+        return hour_rain_forecast(req, state).await;
+    }
+
+    Ok(http_404(&""))
 }
 
-async fn current(req: tide::Request<State>) -> tide::Result<String> {
-    let location_str = req
-        .param("location")
-        .unwrap_or_else(|_| req.state().opt.location.as_str());
-    let base_url = surf::Url::parse(weatherapi::WEATHERAPI_BASE_URL).unwrap();
+async fn current(req: Request<Body>, state: State) -> Result<Response<Body>, anyhow::Error> {
+    let location_str = if req.uri().path() == "/v1/current" {
+        state.opt.location.as_str()
+    } else {
+        let path = req
+            .uri()
+            .path()
+            .split('/')
+            .skip_while(|x| x.is_empty())
+            .skip(2)
+            .collect::<Vec<_>>();
+        if path.is_empty() {
+            return Ok(http_404(&"Path has a slash, but no location"));
+        }
+        path[0]
+    };
+    let base_url = reqwest::Url::parse(weatherapi::WEATHERAPI_BASE_URL).unwrap();
     let mut forecast_url = base_url.join("forecast.json").unwrap();
     forecast_url
         .query_pairs_mut()
@@ -49,22 +84,35 @@ async fn current(req: tide::Request<State>) -> tide::Result<String> {
         .append_pair("alerts", "yes");
     forecast_url
         .query_pairs_mut()
-        .append_pair("key", req.state().opt.key.as_str())
+        .append_pair("key", state.opt.key.as_str())
         .append_pair("q", location_str);
-    let handler = req.state().pool.get_handler().await.unwrap();
-    let mut res = handler.get_client().get(forecast_url).send().await.unwrap();
-    drop(handler);
-    let resp_forecast: weatherapi::ForecastResponse = res.body_json().await.unwrap();
+    let client = reqwest::Client::new();
+    let res = client.get(forecast_url).send().await?;
+    let resp_forecast: weatherapi::ForecastResponse = res.json().await.unwrap();
     //dbg!(&resp_forecast);
     let result: aide_proto::v1::weather::CurrentWeather = From::from(resp_forecast);
-    Ok(serde_json::to_string(&result).unwrap())
+    Ok(Response::builder()
+        .body(Body::from(serde_json::to_string(&result).unwrap()))
+        .unwrap())
 }
 
-async fn forecast(req: tide::Request<State>) -> tide::Result<String> {
-    let location_str = req
-        .param("location")
-        .unwrap_or_else(|_| req.state().opt.location.as_str());
-    let base_url = surf::Url::parse(weatherapi::WEATHERAPI_BASE_URL).unwrap();
+async fn forecast(req: Request<Body>, state: State) -> Result<Response<Body>, anyhow::Error> {
+    let location_str = if req.uri().path() == "/v1/forecast" {
+        state.opt.location.as_str()
+    } else {
+        let path = req
+            .uri()
+            .path()
+            .split('/')
+            .skip_while(|x| x.is_empty())
+            .skip(2)
+            .collect::<Vec<_>>();
+        if path.is_empty() {
+            return Ok(http_404(&"Path has a slash, but no location"));
+        }
+        path[0]
+    };
+    let base_url = reqwest::Url::parse(weatherapi::WEATHERAPI_BASE_URL).unwrap();
     let mut forecast_url = base_url.join("forecast.json").unwrap();
     forecast_url
         .query_pairs_mut()
@@ -73,22 +121,38 @@ async fn forecast(req: tide::Request<State>) -> tide::Result<String> {
         .append_pair("alerts", "yes");
     forecast_url
         .query_pairs_mut()
-        .append_pair("key", req.state().opt.key.as_str())
+        .append_pair("key", state.opt.key.as_str())
         .append_pair("q", location_str);
-    let handler = req.state().pool.get_handler().await.unwrap();
-    let mut res = handler.get_client().get(forecast_url).send().await.unwrap();
-    drop(handler);
-    let resp_forecast: weatherapi::ForecastResponse = res.body_json().await.unwrap();
+    let client = reqwest::Client::new();
+    let res = client.get(forecast_url).send().await?;
+    let resp_forecast: weatherapi::ForecastResponse = res.json().await.unwrap();
     //dbg!(&resp_forecast);
     let result: aide_proto::v1::weather::Forecast = From::from(resp_forecast);
-    Ok(serde_json::to_string(&result).unwrap())
+    Ok(Response::builder()
+        .body(Body::from(serde_json::to_string(&result).unwrap()))
+        .unwrap())
 }
 
-async fn hour_rain_forecast(req: tide::Request<State>) -> tide::Result<String> {
-    let location_str = req
-        .param("location")
-        .unwrap_or_else(|_| req.state().opt.location.as_str());
-    let base_url = surf::Url::parse(weatherapi::WEATHERAPI_BASE_URL).unwrap();
+async fn hour_rain_forecast(
+    req: Request<Body>,
+    state: State,
+) -> Result<Response<Body>, anyhow::Error> {
+    let location_str = if req.uri().path() == "/v1/hourrainforecast" {
+        state.opt.location.as_str()
+    } else {
+        let path = req
+            .uri()
+            .path()
+            .split('/')
+            .skip_while(|x| x.is_empty())
+            .skip(2)
+            .collect::<Vec<_>>();
+        if path.is_empty() {
+            return Ok(http_404(&"Path has a slash, but no location"));
+        }
+        path[0]
+    };
+    let base_url = reqwest::Url::parse(weatherapi::WEATHERAPI_BASE_URL).unwrap();
     let mut forecast_url = base_url.join("forecast.json").unwrap();
     forecast_url
         .query_pairs_mut()
@@ -97,13 +161,14 @@ async fn hour_rain_forecast(req: tide::Request<State>) -> tide::Result<String> {
         .append_pair("alerts", "yes");
     forecast_url
         .query_pairs_mut()
-        .append_pair("key", req.state().opt.key.as_str())
+        .append_pair("key", state.opt.key.as_str())
         .append_pair("q", location_str);
-    let handler = req.state().pool.get_handler().await.unwrap();
-    let mut res = handler.get_client().get(forecast_url).send().await.unwrap();
-    drop(handler);
-    let resp_forecast: weatherapi::ForecastResponse = res.body_json().await.unwrap();
+    let client = reqwest::Client::new();
+    let res = client.get(forecast_url).send().await?;
+    let resp_forecast: weatherapi::ForecastResponse = res.json().await.unwrap();
     //dbg!(&resp_forecast);
     let result: aide_proto::v1::weather::RainForecast = From::from(resp_forecast);
-    Ok(serde_json::to_string(&result).unwrap())
+    Ok(Response::builder()
+        .body(Body::from(serde_json::to_string(&result).unwrap()))
+        .unwrap())
 }
