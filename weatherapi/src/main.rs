@@ -1,6 +1,5 @@
 mod cli;
 mod weatherapi;
-const WEATHERAPI_PORT: u16 = 9091;
 
 use aide_common::{healthz, http_404};
 use clap::Parser;
@@ -15,11 +14,11 @@ struct State {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let opt = cli::Opt::parse();
-    if opt.registration {
+    if opt.common_opt.registration {
         todo!("Registration not implemented yet!")
     }
 
-    let state = State { opt };
+    let state = State { opt: opt.clone() };
     let service = make_service_fn(|_| {
         let cloned_state = state.clone();
         async {
@@ -29,10 +28,7 @@ async fn main() -> Result<(), anyhow::Error> {
         }
     });
 
-    //let socket_addr = std::net::SocketAddr::new(opt.common_opt.host_addr, opt.common_opt.port);
-    use std::net::{IpAddr, Ipv4Addr};
-    let socket_addr =
-        std::net::SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), WEATHERAPI_PORT);
+    let socket_addr = std::net::SocketAddr::new(opt.common_opt.host_addr, opt.common_opt.port);
     let server = Server::bind(&socket_addr).serve(service);
     server.await?;
     Ok(())
