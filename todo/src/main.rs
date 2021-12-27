@@ -40,7 +40,10 @@ fn get_todos_count(v: &[&AideTodo]) -> i32 {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let opt: cli::Opt = cli::Opt::parse();
-    let base_url = reqwest::Url::parse(&format!("http://{}:{}", opt.host_addr, opt.port))?;
+    let base_url = reqwest::Url::parse(&format!(
+        "http://{}:{}",
+        opt.common_opt.host_addr, opt.common_opt.port
+    ))?;
     let todos: Vec<AideTodo> = if opt.todo_type.is_some() {
         match opt.todo_type.unwrap() {
             cli::TodoTypes::Task => {
