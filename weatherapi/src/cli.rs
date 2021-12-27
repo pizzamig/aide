@@ -2,9 +2,9 @@ use clap::Parser;
 
 #[derive(Parser, Clone, Debug)]
 pub struct Opt {
-    #[clap(short = 'R', long)]
+    #[clap(flatten)]
     /// Register to aide as todo plugin
-    pub registration: bool,
+    pub common_opt: aide_common::CliCommonOpt,
     //#[clap(short = 'K', long, hide_env_values = true, env = "WEATHERAPI_API_KEY")]
     #[clap(short = 'K', long, hide_env_values = true, env = "WEATHERAPI_API_KEY")]
     /// The API key to authenticate to the weather api service
