@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::net::IpAddr;
 use strum_macros::EnumString;
 
 #[derive(Parser, Clone)]
@@ -12,8 +13,16 @@ pub struct Opt {
     /// Specify labels
     #[clap(short, long)]
     pub label: Option<String>,
-    /// Tcp port to be used (default 9099)
-    #[clap(short, long, default_value = "9099")]
+    #[clap(
+        name = "server",
+        long = "server",
+        short = 'S',
+        default_value = "127.0.0.1"
+    )]
+    /// Set the listening IP address (default: 127.0.0.1)
+    pub host_addr: IpAddr,
+    /// Tcp port of the server (default 9099)
+    #[clap(short, long, default_value_t = 9099)]
     pub port: u16,
 }
 
