@@ -2,27 +2,34 @@ mod cli;
 
 use clap::Parser;
 
-const BASE_URL: &str = "http://localhost:9091/v1/";
-
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let opt: cli::Opt = cli::Opt::parse();
     match opt.forecast {
-        cli::ForecastTypes::Current => current(opt.location).await?,
-        cli::ForecastTypes::Forecast => forecast(opt.location).await?,
-        cli::ForecastTypes::Rain => rain(opt.location).await?,
+        cli::ForecastTypes::Current => current(opt).await?,
+        cli::ForecastTypes::Forecast => forecast(opt).await?,
+        cli::ForecastTypes::Rain => rain(opt).await?,
         cli::ForecastTypes::All => {
-            current(opt.location.clone()).await?;
-            forecast(opt.location.clone()).await?;
-            rain(opt.location).await?;
+            current(opt.clone()).await?;
+            forecast(opt.clone()).await?;
+            rain(opt).await?;
         }
     };
     Ok(())
 }
 
-async fn current(location: Option<String>) -> Result<(), anyhow::Error> {
-    let base_url = reqwest::Url::parse(BASE_URL)?;
-    let url = match location {
+fn get_base_url(opt: &cli::Opt) -> Result<reqwest::Url, anyhow::Error> {
+    let base_url = reqwest::Url::parse(&format!(
+        "http://{}:{}",
+        opt.host_addr.to_string(),
+        opt.port
+    ))?;
+    Ok(base_url)
+}
+
+async fn current(opt: cli::Opt) -> Result<(), anyhow::Error> {
+    let base_url = get_base_url(&opt)?;
+    let url = match opt.location {
         Some(q) => base_url.join("current/")?.join(&q)?,
         None => base_url.join("current")?,
     };
@@ -37,10 +44,11 @@ async fn current(location: Option<String>) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn forecast(location: Option<String>) -> Result<(), anyhow::Error> {
-    let url = match location {
-        Some(q) => reqwest::Url::parse(BASE_URL)?.join("forecast/")?.join(&q)?,
-        None => reqwest::Url::parse(BASE_URL)?.join("forecast")?,
+async fn forecast(opt: cli::Opt) -> Result<(), anyhow::Error> {
+    let base_url = get_base_url(&opt)?;
+    let url = match opt.location {
+        Some(q) => base_url.join("forecast/")?.join(&q)?,
+        None => base_url.join("forecast")?,
     };
     let res = reqwest::get(url).await?;
     let cf: aide_proto::v1::weather::Forecast = res.json().await?;
@@ -53,12 +61,11 @@ async fn forecast(location: Option<String>) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn rain(location: Option<String>) -> Result<(), anyhow::Error> {
-    let url = match location {
-        Some(q) => reqwest::Url::parse(BASE_URL)?
-            .join("hourrainforecast/")?
-            .join(&q)?,
-        None => reqwest::Url::parse(BASE_URL)?.join("hourrainforecast")?,
+async fn rain(opt: cli::Opt) -> Result<(), anyhow::Error> {
+    let base_url = get_base_url(&opt)?;
+    let url = match opt.location {
+        Some(q) => base_url.join("hourrainforecast/")?.join(&q)?,
+        None => base_url.join("hourrainforecast")?,
     };
     let res = reqwest::get(url).await?;
     let rf: aide_proto::v1::weather::RainForecast = res.json().await?;
