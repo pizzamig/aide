@@ -1279,6 +1279,7 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 name = "todo"
 version = "0.1.0"
 dependencies = [
+ "aide-common",
  "aide-proto",
  "anyhow",
  "clap 3.0.0-rc.8",
@@ -1551,6 +1552,7 @@ checksum = "0237232789cf037d5480773fe568aac745bfe2afbc11a863e97901780a6b47cc"
 name = "weather"
 version = "0.1.0"
 dependencies = [
+ "aide-common",
  "aide-proto",
  "anyhow",
  "clap 3.0.0-rc.8",

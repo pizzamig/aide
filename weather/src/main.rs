@@ -19,7 +19,11 @@ async fn main() -> Result<(), anyhow::Error> {
 }
 
 fn get_base_url(opt: &cli::Opt) -> Result<reqwest::Url, anyhow::Error> {
-    let base_url = reqwest::Url::parse(&format!("http://{}:{}/v1/", opt.host_addr, opt.port))?;
+    let proto = opt.common_opt.get_proto_str();
+    let base_url = reqwest::Url::parse(&format!(
+        "{}://{}:{}/v1/",
+        proto, opt.common_opt.host_addr, opt.common_opt.port
+    ))?;
     Ok(base_url)
 }
 
