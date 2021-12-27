@@ -40,37 +40,34 @@ fn get_todos_count(v: &[&AideTodo]) -> i32 {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let opt: cli::Opt = cli::Opt::parse();
-    let proto = if opt.common_opt.notls {
-        "http"
-    } else {
-        "https"
-    };
     let base_url = reqwest::Url::parse(&format!(
-        "{}://{}:{}",
-        proto, opt.common_opt.host_addr, opt.common_opt.port
+        "{}://{}:{}/v1/",
+        opt.common_opt.get_proto_str(),
+        opt.common_opt.host_addr,
+        opt.common_opt.port
     ))?;
     let todos: Vec<AideTodo> = if opt.todo_type.is_some() {
         match opt.todo_type.unwrap() {
             cli::TodoTypes::Task => {
-                let url = base_url.join("v1/types/task/todos")?;
+                let url = base_url.join("types/task/todos")?;
                 let res = reqwest::get(url).await?;
                 res.json().await?
             }
             cli::TodoTypes::Daily => {
-                let url = base_url.join("v1/types/daily/todos")?;
+                let url = base_url.join("types/daily/todos")?;
                 let res = reqwest::get(url).await?;
                 res.json().await?
             }
             cli::TodoTypes::Weekly => {
-                let url = base_url.join("v1/types/weekly/todos")?;
+                let url = base_url.join("types/weekly/todos")?;
                 let res = reqwest::get(url).await?;
                 res.json().await?
             }
             cli::TodoTypes::Periodic => {
-                let url = base_url.join("v1/types/daily/todos")?;
+                let url = base_url.join("types/daily/todos")?;
                 let res = reqwest::get(url).await?;
                 let mut todos: Vec<AideTodo> = res.json().await?;
-                let url = base_url.join("v1/types/weekly/todos")?;
+                let url = base_url.join("types/weekly/todos")?;
                 let res = reqwest::get(url).await?;
                 let mut temp_todos: Vec<AideTodo> = res.json().await?;
                 todos.append(&mut temp_todos);
@@ -78,7 +75,7 @@ async fn main() -> Result<(), anyhow::Error> {
             }
         }
     } else {
-        let url = base_url.join("v1/todos")?;
+        let url = base_url.join("todos")?;
         let res = reqwest::get(url).await?;
         res.json().await?
     };
