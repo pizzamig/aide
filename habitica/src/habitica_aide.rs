@@ -16,7 +16,7 @@ pub struct HabiticaState {
 }
 
 pub async fn fill_tag_cache(state: HabiticaState) -> Result<(), anyhow::Error> {
-    let base_url = surf::Url::parse(BASE_URL_V3)?;
+    let base_url = reqwest::Url::parse(BASE_URL_V3)?;
     let tags_url = base_url.join("tags")?;
     let client = reqwest::Client::new();
     let response = client
