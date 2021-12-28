@@ -18,6 +18,8 @@ type TagCache = Arc<RwLock<HashMap<String, String>>>;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    env_logger::try_init()
+        .unwrap_or_else(|e| eprintln!("Failed to initialize env_logger [{:?}]", e));
     let opt: cli::Opt = cli::Opt::parse();
     let key = std::env::var(HABITICA_KEY_ENV_VAR)
         .unwrap_or_else(|_| panic!("The env var {} is missing", HABITICA_KEY_ENV_VAR));
