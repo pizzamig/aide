@@ -13,6 +13,8 @@ struct State {
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    env_logger::try_init()
+        .unwrap_or_else(|e| eprintln!("Failed to initialize env_logger [{:?}]", e));
     let opt = cli::Opt::parse();
     if opt.common_opt.registration {
         todo!("Registration not implemented yet!")
