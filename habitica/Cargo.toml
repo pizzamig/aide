@@ -25,3 +25,6 @@ path = "../aide-proto"
 
 [dependencies.aide-common]
 path = "../aide-common"
+
+[dependencies.reqwest-pool]
+path = "../reqwest-pool"

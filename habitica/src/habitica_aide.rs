@@ -1,4 +1,5 @@
 const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
+use reqwest_pool::ReqwestPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -11,14 +12,15 @@ pub struct HabiticaState {
     pub key: String,
     pub user: String,
     pub client_id: String,
-    //pub pool: SurfPool,
+    pub pool: ReqwestPool,
     pub tag_cache: TagCache,
 }
 
 pub async fn fill_tag_cache(state: HabiticaState) -> Result<(), anyhow::Error> {
     let base_url = reqwest::Url::parse(BASE_URL_V3)?;
     let tags_url = base_url.join("tags")?;
-    let client = reqwest::Client::new();
+    let handler = state.pool.get_handler().await?;
+    let client = handler.get_client();
     let response = client
         .get(tags_url)
         .header("x-client", state.client_id.clone())
@@ -27,6 +29,7 @@ pub async fn fill_tag_cache(state: HabiticaState) -> Result<(), anyhow::Error> {
         .send()
         .await?;
     let resp_tags: super::habitica::RespTags = response.json().await?;
+    drop(handler);
     let mut unlocked_cache = state.tag_cache.write().await;
     for tag in resp_tags.data.iter() {
         unlocked_cache.insert(tag.id.clone(), tag.name.clone());
@@ -62,7 +65,8 @@ pub async fn get_tasks(
     let base_url = reqwest::Url::parse(BASE_URL_V3).unwrap();
     let mut todo_url = base_url.join("tasks/user").unwrap();
     todo_url.set_query(Some(&format!("type={}", task_type.to_string())));
-    let client = reqwest::Client::new();
+    let handler = state.pool.get_handler().await?;
+    let client = handler.get_client();
     let response = client
         .get(todo_url)
         .header("x-client", state.client_id.clone())
@@ -73,6 +77,7 @@ pub async fn get_tasks(
     match task_type {
         UsersTaskTypes::Dailys => {
             let resp_daily: RespDaily = response.json().await?;
+            drop(handler);
             let todos: Vec<aide_proto::v1::todo::Todo> = resp_daily
                 .data
                 .iter()
@@ -84,6 +89,7 @@ pub async fn get_tasks(
         }
         UsersTaskTypes::Todos => {
             let resp_task: RespTask = response.json().await?;
+            drop(handler);
             let todos: Vec<aide_proto::v1::todo::Todo> =
                 resp_task.data.iter().map(|t| t.into()).collect();
             //debug!("received from habitica {} todos", todos.len());
