@@ -27,11 +27,13 @@ async fn main() -> Result<(), anyhow::Error> {
         .unwrap_or_else(|_| panic!("The env var {} is missing", HABITICA_USER_ENV_VAR));
     let client_id = std::env::var(CLIENT_ID_ENV_VAR)
         .unwrap_or_else(|_| panic!("the env var {} is missing", CLIENT_ID_ENV_VAR));
+    let builder = reqwest_pool::ReqwestPoolBuilder::new(1).unwrap();
+    let pool = builder.build().await;
     let state = HabiticaState {
         key,
         user,
         client_id,
-        //pool,
+        pool,
         tag_cache: TagCache::default(),
     };
 

@@ -5,10 +5,12 @@ use aide_common::{healthz, http_404};
 use clap::Parser;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server};
+use reqwest_pool::ReqwestPool;
+
 #[derive(Clone, Debug)]
 struct State {
     opt: cli::Opt,
-    //pool: SurfPool,
+    pool: ReqwestPool,
 }
 
 #[tokio::main]
@@ -20,7 +22,12 @@ async fn main() -> Result<(), anyhow::Error> {
         todo!("Registration not implemented yet!")
     }
 
-    let state = State { opt: opt.clone() };
+    let builder = reqwest_pool::ReqwestPoolBuilder::new(1).unwrap();
+    let pool = builder.build().await;
+    let state = State {
+        opt: opt.clone(),
+        pool,
+    };
     let service = make_service_fn(|_| {
         let cloned_state = state.clone();
         async {
@@ -84,9 +91,11 @@ async fn current(req: Request<Body>, state: State) -> Result<Response<Body>, any
         .query_pairs_mut()
         .append_pair("key", state.opt.key.as_str())
         .append_pair("q", location_str);
-    let client = reqwest::Client::new();
+    let handler = state.pool.get_handler().await?;
+    let client = handler.get_client();
     let res = client.get(forecast_url).send().await?;
     let resp_forecast: weatherapi::ForecastResponse = res.json().await.unwrap();
+    drop(handler);
     //dbg!(&resp_forecast);
     let result: aide_proto::v1::weather::CurrentWeather = From::from(resp_forecast);
     Ok(Response::builder()
@@ -121,9 +130,11 @@ async fn forecast(req: Request<Body>, state: State) -> Result<Response<Body>, an
         .query_pairs_mut()
         .append_pair("key", state.opt.key.as_str())
         .append_pair("q", location_str);
-    let client = reqwest::Client::new();
+    let handler = state.pool.get_handler().await?;
+    let client = handler.get_client();
     let res = client.get(forecast_url).send().await?;
     let resp_forecast: weatherapi::ForecastResponse = res.json().await.unwrap();
+    drop(handler);
     //dbg!(&resp_forecast);
     let result: aide_proto::v1::weather::Forecast = From::from(resp_forecast);
     Ok(Response::builder()
@@ -161,9 +172,11 @@ async fn hour_rain_forecast(
         .query_pairs_mut()
         .append_pair("key", state.opt.key.as_str())
         .append_pair("q", location_str);
-    let client = reqwest::Client::new();
+    let handler = state.pool.get_handler().await?;
+    let client = handler.get_client();
     let res = client.get(forecast_url).send().await?;
     let resp_forecast: weatherapi::ForecastResponse = res.json().await.unwrap();
+    drop(handler);
     //dbg!(&resp_forecast);
     let result: aide_proto::v1::weather::RainForecast = From::from(resp_forecast);
     Ok(Response::builder()
