@@ -64,7 +64,7 @@ pub async fn get_tasks(
 ) -> Result<Vec<aide_proto::v1::todo::Todo>, anyhow::Error> {
     let base_url = reqwest::Url::parse(BASE_URL_V3).unwrap();
     let mut todo_url = base_url.join("tasks/user").unwrap();
-    todo_url.set_query(Some(&format!("type={}", task_type.to_string())));
+    todo_url.set_query(Some(&format!("type={}", task_type)));
     let handler = state.pool.get_handler().await?;
     let client = handler.get_client();
     let response = client
