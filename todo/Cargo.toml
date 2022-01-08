@@ -13,7 +13,7 @@ tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.11.8", features = ["default-tls", "gzip", "brotli", "json" ]}
 clap = {version = "3.0.0", features = ["derive"]}
 strum = "0.23"
-strum_macros = "0.21"
+strum_macros = "0.23"
 anyhow = "1.0.52"
 
 [dependencies.aide-proto]
