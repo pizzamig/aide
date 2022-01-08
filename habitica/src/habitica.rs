@@ -225,7 +225,7 @@ pub struct Tag {
     pub id: String,
 }
 
-#[derive(strum_macros::ToString, Debug, Clone, PartialEq)]
+#[derive(strum::Display, Debug, Clone, PartialEq)]
 pub enum UsersTaskTypes {
     #[allow(dead_code)]
     #[strum(serialize = "habit")]
