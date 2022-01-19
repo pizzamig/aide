@@ -1,4 +1,5 @@
 const BASE_URL_V3: &str = "https://habitica.com/api/v3/";
+use anyhow::anyhow;
 use reqwest_pool::ReqwestPool;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -140,4 +141,53 @@ pub async fn get_all_tasks(
         .collect();
     result.append(&mut filtered_dailys);
     Ok(result)
+}
+
+pub async fn _create_label(state: &HabiticaState, label: &str) -> Result<(), anyhow::Error> {
+    let base_url = reqwest::Url::parse(BASE_URL_V3)?;
+    let tags_url = base_url.join("tags")?;
+    let handler = state.pool.get_handler().await?;
+    let client = handler.get_client();
+    let body = super::habitica::CreateTagBody {
+        name: label.to_string(),
+    };
+    let response = client
+        .post(tags_url)
+        .body(serde_json::to_string(&body).unwrap())
+        .header("x-client", state.client_id.clone())
+        .header("x-api-user", state.user.clone())
+        .header("x-api-key", state.key.clone())
+        .send()
+        .await?;
+    let resp: super::habitica::RespCreateTag = response.json().await?;
+    drop(handler);
+    let mut unlocked_cache = state.tag_cache.write().await;
+    unlocked_cache.insert(resp.data.id, resp.data.name);
+
+    Ok(())
+}
+
+pub async fn _delete_label(state: &HabiticaState, label: &str) -> Result<(), anyhow::Error> {
+    let tag_id = get_tag_id(state, label).await.ok_or_else(|| anyhow!("Unkown label: {}", label))?;
+    let base_url = reqwest::Url::parse(BASE_URL_V3)?;
+    let tags_url = base_url.join("tags")?;
+    let delete_url = tags_url.join(&tag_id)?;
+    let handler = state.pool.get_handler().await?;
+    let client = handler.get_client();
+    let response = client
+        .delete(delete_url)
+        .header("x-client", state.client_id.clone())
+        .header("x-api-user", state.user.clone())
+        .header("x-api-key", state.key.clone())
+        .send()
+        .await?;
+    if response.status() == hyper::StatusCode::OK {
+        let resp: super::habitica::RespGeneric = response.json().await?;
+        if resp.success {
+            return Ok(())
+        } else {
+            return Err(anyhow!("Delete of label {} not successful", label));
+        }
+    }
+    Err(anyhow!("{}: {}", response.status(), response.text().await?))
 }
