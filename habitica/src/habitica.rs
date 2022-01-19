@@ -1,5 +1,10 @@
 use aide_proto::v1::todo::{CheckListItem, Todo};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Debug)]
+pub struct RespGeneric {
+    pub success: bool,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct RespTask {
@@ -223,6 +228,17 @@ pub struct RespTags {
 pub struct Tag {
     pub name: String,
     pub id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateTagBody {
+    pub name: String
+}
+
+#[derive(Deserialize, Debug)]
+pub struct RespCreateTag {
+    pub success: bool,
+    pub data: Tag,
 }
 
 #[cfg(test)]
