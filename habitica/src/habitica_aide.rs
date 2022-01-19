@@ -168,7 +168,9 @@ pub async fn _create_label(state: &HabiticaState, label: &str) -> Result<(), any
 }
 
 pub async fn _delete_label(state: &HabiticaState, label: &str) -> Result<(), anyhow::Error> {
-    let tag_id = get_tag_id(state, label).await.ok_or_else(|| anyhow!("Unkown label: {}", label))?;
+    let tag_id = get_tag_id(state, label)
+        .await
+        .ok_or_else(|| anyhow!("Unkown label: {}", label))?;
     let base_url = reqwest::Url::parse(BASE_URL_V3)?;
     let tags_url = base_url.join("tags")?;
     let delete_url = tags_url.join(&tag_id)?;
@@ -184,7 +186,10 @@ pub async fn _delete_label(state: &HabiticaState, label: &str) -> Result<(), any
     if response.status() == hyper::StatusCode::OK {
         let resp: super::habitica::RespGeneric = response.json().await?;
         if resp.success {
-            return Ok(())
+            drop(handler);
+            let mut unlocked_cache = state.tag_cache.write().await;
+            unlocked_cache.remove(&tag_id);
+            return Ok(());
         } else {
             return Err(anyhow!("Delete of label {} not successful", label));
         }
