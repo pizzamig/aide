@@ -111,20 +111,21 @@ async fn type_todos(
         return Ok(http_404(&format!("Unrecognized word {}", path[1])));
     }
     use aide_proto::v1::todo::TodoTypes;
-    use habitica_aide::replace_tag_id;
+    use habitica_aide::{replace_tag_id, UsersTaskTypes};
     let type_str = path[0];
+
     if let Ok(todo_type) = TodoTypes::from_str(type_str) {
         use habitica_aide::get_tag_id;
         match todo_type {
             TodoTypes::Task => {
-                let todos = get_tasks(&state, habitica::UsersTaskTypes::Todos).await?;
+                let todos = get_tasks(&state, UsersTaskTypes::Todos).await?;
                 Ok(Response::builder()
                     .body(Body::from(serde_json::to_string(&todos).unwrap()))
                     .unwrap())
             }
             TodoTypes::Daily => {
                 if let Some(tag_id) = get_tag_id(&state, "daily").await {
-                    let dailys = get_tasks(&state, habitica::UsersTaskTypes::Dailys).await?;
+                    let dailys = get_tasks(&state, UsersTaskTypes::Dailys).await?;
                     let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
                         .iter()
                         .filter(|d| d.tags.iter().any(|t| t == &tag_id))
@@ -145,7 +146,7 @@ async fn type_todos(
 
             TodoTypes::Weekly => {
                 if let Some(tag_id) = get_tag_id(&state, "weekly").await {
-                    let dailys = get_tasks(&state, habitica::UsersTaskTypes::Dailys).await?;
+                    let dailys = get_tasks(&state, UsersTaskTypes::Dailys).await?;
                     let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
                         .iter()
                         .filter(|d| d.tags.iter().any(|t| t == &tag_id))

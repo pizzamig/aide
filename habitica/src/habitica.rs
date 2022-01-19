@@ -225,23 +225,6 @@ pub struct Tag {
     pub id: String,
 }
 
-#[derive(strum::Display, Debug, Clone, PartialEq)]
-pub enum UsersTaskTypes {
-    #[allow(dead_code)]
-    #[strum(serialize = "habit")]
-    Habits,
-    #[strum(serialize = "todos")]
-    Todos,
-    #[allow(dead_code)]
-    #[strum(serialize = "reward")]
-    Rewards,
-    #[strum(serialize = "dailys")]
-    Dailys,
-    #[allow(dead_code)]
-    #[strum(serialize = "completedTodos")]
-    CompletedTodos,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

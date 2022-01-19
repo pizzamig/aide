@@ -16,6 +16,23 @@ pub struct HabiticaState {
     pub tag_cache: TagCache,
 }
 
+#[derive(strum::Display, Debug, Clone, PartialEq)]
+pub enum UsersTaskTypes {
+    #[allow(dead_code)]
+    #[strum(serialize = "habit")]
+    Habits,
+    #[strum(serialize = "todos")]
+    Todos,
+    #[allow(dead_code)]
+    #[strum(serialize = "reward")]
+    Rewards,
+    #[strum(serialize = "dailys")]
+    Dailys,
+    #[allow(dead_code)]
+    #[strum(serialize = "completedTodos")]
+    CompletedTodos,
+}
+
 pub async fn fill_tag_cache(state: HabiticaState) -> Result<(), anyhow::Error> {
     let base_url = reqwest::Url::parse(BASE_URL_V3)?;
     let tags_url = base_url.join("tags")?;
@@ -56,7 +73,7 @@ pub async fn get_tag_id<'a, 'b>(state: &HabiticaState, label: &str) -> Option<St
         .map(|(k, _)| k.clone())
 }
 
-use super::habitica::{RespDaily, RespTask, UsersTaskTypes};
+use super::habitica::{RespDaily, RespTask};
 
 pub async fn get_tasks(
     state: &HabiticaState,
