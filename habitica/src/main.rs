@@ -62,8 +62,11 @@ async fn habitica_svc(
     req: Request<Body>,
     state: HabiticaState,
 ) -> Result<Response<Body>, anyhow::Error> {
-    if req.method() != Method::GET {
-        return Ok(http_404(&"The only method supported is GET"));
+    if req.method() != Method::GET && req.method() != Method::DELETE && req.method() != Method::POST
+    {
+        return Ok(http_404(
+            &"The only methods supported are GET, POST and DELETE",
+        ));
     }
     if req.uri().path() == "/healthz" {
         return Ok(healthz());
@@ -177,6 +180,8 @@ async fn type_todos(
 async fn labels(req: Request<Body>, state: HabiticaState) -> Result<Response<Body>, anyhow::Error> {
     if req.method() == Method::DELETE {
         delete_label(req, state).await
+    } else if req.method() == Method::POST {
+        add_label(req, state).await
     } else if req.uri().path() == "/v1/labels" {
         use aide_proto::v1::{todo::TodoTypes, DataResponse};
         let unlocked_cache = state.tag_cache.read().await;
@@ -195,6 +200,27 @@ async fn labels(req: Request<Body>, state: HabiticaState) -> Result<Response<Bod
     }
 }
 
+// POST /v1/labels
+// { name: "label_name" }
+async fn add_label(
+    req: Request<Body>,
+    state: HabiticaState,
+) -> Result<Response<Body>, anyhow::Error> {
+    let path = url_to_pathvec(req.uri());
+    if path.len() < 2 {
+        return Ok(http_404(&format!("Path has wrong length: {}", path.len())));
+    }
+    let body = hyper::body::to_bytes(req.into_body()).await?;
+    let label: aide_proto::v1::todo::Label = serde_json::from_slice(&body)?;
+
+    habitica_aide::create_label(&state, &label.name).await?;
+    let response = ResultResponse { success: true };
+
+    Ok(Response::builder()
+        .body(Body::from(serde_json::to_string(&response).unwrap()))
+        .unwrap())
+}
+
 // DELETE /v1/labels/:label
 async fn delete_label(
     req: Request<Body>,
@@ -205,7 +231,7 @@ async fn delete_label(
         return Ok(http_404(&format!("Path has wrong length: {}", path.len())));
     }
     let label = path[2];
-    habitica_aide::_delete_label(&state, label).await?;
+    habitica_aide::delete_label(&state, label).await?;
     let response = ResultResponse { success: true };
 
     Ok(Response::builder()

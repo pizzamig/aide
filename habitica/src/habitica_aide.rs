@@ -143,7 +143,7 @@ pub async fn get_all_tasks(
     Ok(result)
 }
 
-pub async fn _create_label(state: &HabiticaState, label: &str) -> Result<(), anyhow::Error> {
+pub async fn create_label(state: &HabiticaState, label: &str) -> Result<(), anyhow::Error> {
     let base_url = reqwest::Url::parse(BASE_URL_V3)?;
     let tags_url = base_url.join("tags")?;
     let handler = state.pool.get_handler().await?;
@@ -167,7 +167,7 @@ pub async fn _create_label(state: &HabiticaState, label: &str) -> Result<(), any
     Ok(())
 }
 
-pub async fn _delete_label(state: &HabiticaState, label: &str) -> Result<(), anyhow::Error> {
+pub async fn delete_label(state: &HabiticaState, label: &str) -> Result<(), anyhow::Error> {
     let tag_id = get_tag_id(state, label)
         .await
         .ok_or_else(|| anyhow!("Unkown label: {}", label))?;
