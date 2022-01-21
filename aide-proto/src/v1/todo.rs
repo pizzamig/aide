@@ -64,6 +64,15 @@ impl std::fmt::Display for Todo {
     }
 }
 
+impl From<String> for Todo {
+    fn from(name: String) -> Self {
+        Todo {
+            name,
+            ..Todo::default()
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CheckListItem {
     pub name: String,
@@ -80,13 +89,9 @@ impl std::fmt::Display for CheckListItem {
     }
 }
 
-impl From<String> for Todo {
-    fn from(name: String) -> Self {
-        Todo {
-            name,
-            ..Todo::default()
-        }
-    }
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Label {
+    pub name: String,
 }
 
 #[cfg(test)]
