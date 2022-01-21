@@ -10,6 +10,11 @@ pub struct DataResponseRef<'a> {
     pub data: Vec<&'a str>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct ResultResponse {
+    pub success: bool,
+}
+
 pub mod kind;
 pub use kind::GetModuleKindResponse;
 pub use kind::ModuleKind;
