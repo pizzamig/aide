@@ -153,7 +153,7 @@ pub async fn create_label(state: &HabiticaState, label: &str) -> Result<(), anyh
     };
     let response = client
         .post(tags_url)
-        .body(serde_json::to_string(&body).unwrap())
+        .json(&body)
         .header("x-client", state.client_id.clone())
         .header("x-api-user", state.user.clone())
         .header("x-api-key", state.key.clone())
@@ -172,7 +172,7 @@ pub async fn delete_label(state: &HabiticaState, label: &str) -> Result<(), anyh
         .await
         .ok_or_else(|| anyhow!("Unkown label: {}", label))?;
     let base_url = reqwest::Url::parse(BASE_URL_V3)?;
-    let tags_url = base_url.join("tags")?;
+    let tags_url = base_url.join("tags/")?;
     let delete_url = tags_url.join(&tag_id)?;
     let handler = state.pool.get_handler().await?;
     let client = handler.get_client();
