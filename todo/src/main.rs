@@ -1,6 +1,6 @@
 mod cli;
 
-use aide_proto::v1::Todo as AideTodo;
+use aide_proto::v1::{ResultResponse, Todo as AideTodo};
 use clap::Parser;
 
 fn print_todo(t: &&AideTodo) {
@@ -46,6 +46,36 @@ async fn main() -> Result<(), anyhow::Error> {
         opt.common_opt.host_addr,
         opt.common_opt.port
     ))?;
+    if opt.command.is_some() {
+        if let Some(cli::Subcommands::Label {
+            name,
+            create,
+            delete,
+        }) = &opt.command
+        {
+            if *create {
+                use aide_proto::v1::todo::Label;
+                let label = Label { name: name.clone() };
+                let url = base_url.join("labels")?;
+                let client = reqwest::Client::new();
+                let _res: ResultResponse = client
+                    .post(url)
+                    .body(serde_json::to_string(&label)?)
+                    .send()
+                    .await?
+                    .json()
+                    .await?;
+                return Ok(());
+            } else {
+                assert!(delete);
+                let url_path = format!("labels/{name}");
+                let url = base_url.join(&url_path)?;
+                let client = reqwest::Client::new();
+                let _res: ResultResponse = client.delete(url).send().await?.json().await?;
+                return Ok(());
+            }
+        }
+    }
     let todos: Vec<AideTodo> = if opt.todo_type.is_some() {
         match opt.todo_type.unwrap() {
             cli::TodoTypes::Task => {
