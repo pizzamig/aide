@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
 pub struct DataResponse {
@@ -10,7 +10,7 @@ pub struct DataResponseRef<'a> {
     pub data: Vec<&'a str>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ResultResponse {
     pub success: bool,
 }
