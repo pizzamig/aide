@@ -84,12 +84,7 @@ use std::fmt::Write as FmtWrite;
 impl From<ForecastResponse> for CurrentWeather {
     fn from(fr: ForecastResponse) -> Self {
         let mut location = String::new();
-        write!(
-            &mut location,
-            "{} ({})",
-            fr.location.name, fr.location.country
-        )
-        .unwrap();
+        write!(location, "{} ({})", fr.location.name, fr.location.country).unwrap();
 
         CurrentWeather {
             location,
@@ -106,12 +101,7 @@ use aide_proto::v1::weather::Forecast as AideForecast;
 impl From<ForecastResponse> for AideForecast {
     fn from(fr: ForecastResponse) -> Self {
         let mut location = String::new();
-        write!(
-            &mut location,
-            "{} ({})",
-            fr.location.name, fr.location.country
-        )
-        .unwrap();
+        write!(location, "{} ({})", fr.location.name, fr.location.country).unwrap();
         let mut days = fr.forecast.forecastday;
         let tomorrow = days.pop().unwrap();
         let today = days.pop().unwrap();
@@ -142,12 +132,7 @@ use aide_proto::v1::weather::{HourRainForecast, RainForecast};
 impl From<ForecastResponse> for RainForecast {
     fn from(fr: ForecastResponse) -> Self {
         let mut location = String::new();
-        write!(
-            &mut location,
-            "{} ({})",
-            fr.location.name, fr.location.country
-        )
-        .unwrap();
+        write!(location, "{} ({})", fr.location.name, fr.location.country).unwrap();
         let current_epoch = fr.location.localtime_epoch;
         let mut days = fr.forecast.forecastday;
         let tomorrow = days.pop().unwrap();
