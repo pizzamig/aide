@@ -76,38 +76,37 @@ async fn main() -> Result<(), anyhow::Error> {
             }
         }
     }
-    let todos: Vec<AideTodo> = if opt.todo_type.is_some() {
-        match opt.todo_type.unwrap() {
-            cli::TodoTypes::Task => {
-                let url = base_url.join("types/task/todos")?;
-                let res = reqwest::get(url).await?;
-                res.json().await?
-            }
-            cli::TodoTypes::Daily => {
-                let url = base_url.join("types/daily/todos")?;
-                let res = reqwest::get(url).await?;
-                res.json().await?
-            }
-            cli::TodoTypes::Weekly => {
-                let url = base_url.join("types/weekly/todos")?;
-                let res = reqwest::get(url).await?;
-                res.json().await?
-            }
-            cli::TodoTypes::Periodic => {
-                let url = base_url.join("types/daily/todos")?;
-                let res = reqwest::get(url).await?;
-                let mut todos: Vec<AideTodo> = res.json().await?;
-                let url = base_url.join("types/weekly/todos")?;
-                let res = reqwest::get(url).await?;
-                let mut temp_todos: Vec<AideTodo> = res.json().await?;
-                todos.append(&mut temp_todos);
-                todos
-            }
+    let todos: Vec<AideTodo> = match opt.todo_type {
+        Some(cli::TodoTypes::Task) => {
+            let url = base_url.join("types/task/todos")?;
+            let res = reqwest::get(url).await?;
+            res.json().await?
         }
-    } else {
-        let url = base_url.join("todos")?;
-        let res = reqwest::get(url).await?;
-        res.json().await?
+        Some(cli::TodoTypes::Daily) => {
+            let url = base_url.join("types/daily/todos")?;
+            let res = reqwest::get(url).await?;
+            res.json().await?
+        }
+        Some(cli::TodoTypes::Weekly) => {
+            let url = base_url.join("types/weekly/todos")?;
+            let res = reqwest::get(url).await?;
+            res.json().await?
+        }
+        Some(cli::TodoTypes::Periodic) => {
+            let url = base_url.join("types/daily/todos")?;
+            let res = reqwest::get(url).await?;
+            let mut todos: Vec<AideTodo> = res.json().await?;
+            let url = base_url.join("types/weekly/todos")?;
+            let res = reqwest::get(url).await?;
+            let mut temp_todos: Vec<AideTodo> = res.json().await?;
+            todos.append(&mut temp_todos);
+            todos
+        }
+        None => {
+            let url = base_url.join("todos")?;
+            let res = reqwest::get(url).await?;
+            res.json().await?
+        }
     };
     let temp_todos: Vec<&AideTodo> = if let Some(label) = opt.label {
         todos.iter().filter(|t| t.tags.contains(&label)).collect()
