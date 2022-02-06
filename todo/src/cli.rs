@@ -1,24 +1,42 @@
-use clap::Parser;
+use clap::{AppSettings, ArgEnum, ArgGroup, Parser, Subcommand};
 use strum_macros::EnumString;
 
 #[derive(Parser, Clone)]
+#[clap(author, version, about)]
+#[clap(global_setting(AppSettings::PropagateVersion))]
 pub struct Opt {
-    #[clap(short, long)]
+    #[clap(short, long, arg_enum)]
     /// Optional parameter to get only one type of todos
-    /// Available types are: daily, weekly, task, periodic
     pub todo_type: Option<TodoTypes>,
     /// Specify labels
     #[clap(short, long)]
     pub label: Option<String>,
     #[clap(flatten)]
     pub common_opt: aide_common::CliCommonOpt,
+    #[clap(subcommand)]
+    pub command: Option<Subcommands>,
 }
 
-#[derive(Debug, Clone, PartialEq, EnumString)]
+#[derive(Debug, Clone, PartialEq, EnumString, ArgEnum)]
 #[strum(ascii_case_insensitive)]
 pub enum TodoTypes {
     Daily,
     Weekly,
     Task,
     Periodic,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum Subcommands {
+    #[clap(group(ArgGroup::new("label-ops").required(true).args(&["create", "delete"])))]
+    /// Manipulate labels
+    Label {
+        name: String,
+        /// Add a new label
+        #[clap(short, long)]
+        create: bool,
+        /// Delete a new label
+        #[clap(short, long)]
+        delete: bool,
+    },
 }

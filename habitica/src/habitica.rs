@@ -1,5 +1,10 @@
 use aide_proto::v1::todo::{CheckListItem, Todo};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Debug)]
+pub struct RespGeneric {
+    pub success: bool,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct RespTask {
@@ -225,21 +230,15 @@ pub struct Tag {
     pub id: String,
 }
 
-#[derive(strum::Display, Debug, Clone, PartialEq)]
-pub enum UsersTaskTypes {
-    #[allow(dead_code)]
-    #[strum(serialize = "habit")]
-    Habits,
-    #[strum(serialize = "todos")]
-    Todos,
-    #[allow(dead_code)]
-    #[strum(serialize = "reward")]
-    Rewards,
-    #[strum(serialize = "dailys")]
-    Dailys,
-    #[allow(dead_code)]
-    #[strum(serialize = "completedTodos")]
-    CompletedTodos,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateTagBody {
+    pub name: String
+}
+
+#[derive(Deserialize, Debug)]
+pub struct RespCreateTag {
+    pub success: bool,
+    pub data: Tag,
 }
 
 #[cfg(test)]

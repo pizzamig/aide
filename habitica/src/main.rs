@@ -5,10 +5,11 @@ const HABITICA_KEY_ENV_VAR: &str = "HABITICA_API_KEY";
 const HABITICA_USER_ENV_VAR: &str = "HABITICA_API_USER";
 const CLIENT_ID_ENV_VAR: &str = "HABITICA_CLIENT_ID";
 use aide_common::{healthz, http_404};
+use aide_proto::v1::ResultResponse;
 use clap::Parser;
 use habitica_aide::{get_all_tasks, get_tasks, HabiticaState};
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Method, Request, Response, Server};
+use hyper::{Body, Method, Request, Response, Server, Uri};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -61,8 +62,11 @@ async fn habitica_svc(
     req: Request<Body>,
     state: HabiticaState,
 ) -> Result<Response<Body>, anyhow::Error> {
-    if req.method() != Method::GET {
-        return Ok(http_404(&"The only method supported is GET"));
+    if req.method() != Method::GET && req.method() != Method::DELETE && req.method() != Method::POST
+    {
+        return Ok(http_404(
+            &"The only methods supported are GET, POST and DELETE",
+        ));
     }
     if req.uri().path() == "/healthz" {
         return Ok(healthz());
@@ -79,9 +83,11 @@ async fn habitica_svc(
     }
     Ok(http_404(&""))
 }
+
 async fn types(req: Request<Body>, state: HabiticaState) -> Result<Response<Body>, anyhow::Error> {
     use aide_proto::v1::{todo::TodoTypes, DataResponseRef};
     use strum::VariantNames;
+    // /v1/types
     if req.uri().path() == "/v1/types" {
         let data = TodoTypes::VARIANTS.to_vec();
         let response = DataResponseRef { data };
@@ -97,6 +103,7 @@ async fn type_todos(
     req: Request<Body>,
     state: HabiticaState,
 ) -> Result<Response<Body>, anyhow::Error> {
+    // /v1/types/:type/todos
     let path = req
         .uri()
         .path()
@@ -111,20 +118,21 @@ async fn type_todos(
         return Ok(http_404(&format!("Unrecognized word {}", path[1])));
     }
     use aide_proto::v1::todo::TodoTypes;
-    use habitica_aide::replace_tag_id;
+    use habitica_aide::{replace_tag_id, UsersTaskTypes};
     let type_str = path[0];
+
     if let Ok(todo_type) = TodoTypes::from_str(type_str) {
         use habitica_aide::get_tag_id;
         match todo_type {
             TodoTypes::Task => {
-                let todos = get_tasks(&state, habitica::UsersTaskTypes::Todos).await?;
+                let todos = get_tasks(&state, UsersTaskTypes::Todos).await?;
                 Ok(Response::builder()
                     .body(Body::from(serde_json::to_string(&todos).unwrap()))
                     .unwrap())
             }
             TodoTypes::Daily => {
                 if let Some(tag_id) = get_tag_id(&state, "daily").await {
-                    let dailys = get_tasks(&state, habitica::UsersTaskTypes::Dailys).await?;
+                    let dailys = get_tasks(&state, UsersTaskTypes::Dailys).await?;
                     let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
                         .iter()
                         .filter(|d| d.tags.iter().any(|t| t == &tag_id))
@@ -145,7 +153,7 @@ async fn type_todos(
 
             TodoTypes::Weekly => {
                 if let Some(tag_id) = get_tag_id(&state, "weekly").await {
-                    let dailys = get_tasks(&state, habitica::UsersTaskTypes::Dailys).await?;
+                    let dailys = get_tasks(&state, UsersTaskTypes::Dailys).await?;
                     let mut filtered_dailys: Vec<aide_proto::v1::todo::Todo> = dailys
                         .iter()
                         .filter(|d| d.tags.iter().any(|t| t == &tag_id))
@@ -170,7 +178,11 @@ async fn type_todos(
 }
 
 async fn labels(req: Request<Body>, state: HabiticaState) -> Result<Response<Body>, anyhow::Error> {
-    if req.uri().path() == "/v1/labels" {
+    if req.method() == Method::DELETE {
+        delete_label(req, state).await
+    } else if req.method() == Method::POST {
+        add_label(req, state).await
+    } else if req.uri().path() == "/v1/labels" {
         use aide_proto::v1::{todo::TodoTypes, DataResponse};
         let unlocked_cache = state.tag_cache.read().await;
         let data: Vec<String> = unlocked_cache
@@ -188,6 +200,48 @@ async fn labels(req: Request<Body>, state: HabiticaState) -> Result<Response<Bod
     }
 }
 
+// POST /v1/labels
+// { name: "label_name" }
+async fn add_label(
+    req: Request<Body>,
+    state: HabiticaState,
+) -> Result<Response<Body>, anyhow::Error> {
+    let path = url_to_pathvec(req.uri());
+    if path.len() < 2 {
+        return Ok(http_404(&format!("Path has wrong length: {}", path.len())));
+    }
+    let body = hyper::body::to_bytes(req.into_body()).await?;
+    let label: aide_proto::v1::todo::Label = serde_json::from_slice(&body)?;
+
+    habitica_aide::create_label(&state, &label.name).await?;
+    let response = ResultResponse { success: true };
+
+    Ok(Response::builder()
+        .body(Body::from(serde_json::to_string(&response).unwrap()))
+        .unwrap())
+}
+
+// DELETE /v1/labels/:label
+async fn delete_label(
+    req: Request<Body>,
+    state: HabiticaState,
+) -> Result<Response<Body>, anyhow::Error> {
+    let path = url_to_pathvec(req.uri());
+    if path.len() < 3 {
+        return Ok(http_404(&format!("Path has wrong length: {}", path.len())));
+    }
+    let label = path[2];
+    habitica_aide::delete_label(&state, label).await?;
+    let response = ResultResponse { success: true };
+
+    Ok(Response::builder()
+        .body(Body::from(serde_json::to_string(&response).unwrap()))
+        .unwrap())
+}
+
+fn url_to_pathvec(uri: &Uri) -> Vec<&str> {
+    uri.path().split('/').skip_while(|x| x.is_empty()).collect()
+}
 async fn label_todos(
     req: Request<Body>,
     state: HabiticaState,

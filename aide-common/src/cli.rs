@@ -22,16 +22,17 @@ pub struct CliCommonOpt {
         name = "server",
         long = "server",
         short = 'S',
-        default_value = "localhost"
+        default_value = "localhost",
+        global = true
     )]
     /// Set the listening IP address
     pub host_addr: String,
 
-    #[clap(short = 'p', long, default_value_t = 80)]
+    #[clap(short = 'p', long, default_value_t = 80, global = true)]
     /// Listening TCP port of the server
     pub port: u16,
 
-    #[clap(long = "no-tls")]
+    #[clap(long = "no-tls", global = true)]
     /// Force http to connect to the server [default: false]
     pub notls: bool,
 }

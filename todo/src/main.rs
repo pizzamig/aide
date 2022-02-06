@@ -1,6 +1,6 @@
 mod cli;
 
-use aide_proto::v1::Todo as AideTodo;
+use aide_proto::v1::{ResultResponse, Todo as AideTodo};
 use clap::Parser;
 
 fn print_todo(t: &&AideTodo) {
@@ -46,38 +46,67 @@ async fn main() -> Result<(), anyhow::Error> {
         opt.common_opt.host_addr,
         opt.common_opt.port
     ))?;
-    let todos: Vec<AideTodo> = if opt.todo_type.is_some() {
-        match opt.todo_type.unwrap() {
-            cli::TodoTypes::Task => {
-                let url = base_url.join("types/task/todos")?;
-                let res = reqwest::get(url).await?;
-                res.json().await?
-            }
-            cli::TodoTypes::Daily => {
-                let url = base_url.join("types/daily/todos")?;
-                let res = reqwest::get(url).await?;
-                res.json().await?
-            }
-            cli::TodoTypes::Weekly => {
-                let url = base_url.join("types/weekly/todos")?;
-                let res = reqwest::get(url).await?;
-                res.json().await?
-            }
-            cli::TodoTypes::Periodic => {
-                let url = base_url.join("types/daily/todos")?;
-                let res = reqwest::get(url).await?;
-                let mut todos: Vec<AideTodo> = res.json().await?;
-                let url = base_url.join("types/weekly/todos")?;
-                let res = reqwest::get(url).await?;
-                let mut temp_todos: Vec<AideTodo> = res.json().await?;
-                todos.append(&mut temp_todos);
-                todos
+    if opt.command.is_some() {
+        if let Some(cli::Subcommands::Label {
+            name,
+            create,
+            delete,
+        }) = &opt.command
+        {
+            if *create {
+                use aide_proto::v1::todo::Label;
+                let label = Label { name: name.clone() };
+                let url = base_url.join("labels")?;
+                let client = reqwest::Client::new();
+                let _res: ResultResponse = client
+                    .post(url)
+                    .body(serde_json::to_string(&label)?)
+                    .send()
+                    .await?
+                    .json()
+                    .await?;
+                return Ok(());
+            } else {
+                assert!(delete);
+                let url_path = format!("labels/{name}");
+                let url = base_url.join(&url_path)?;
+                let client = reqwest::Client::new();
+                let _res: ResultResponse = client.delete(url).send().await?.json().await?;
+                return Ok(());
             }
         }
-    } else {
-        let url = base_url.join("todos")?;
-        let res = reqwest::get(url).await?;
-        res.json().await?
+    }
+    let todos: Vec<AideTodo> = match opt.todo_type {
+        Some(cli::TodoTypes::Task) => {
+            let url = base_url.join("types/task/todos")?;
+            let res = reqwest::get(url).await?;
+            res.json().await?
+        }
+        Some(cli::TodoTypes::Daily) => {
+            let url = base_url.join("types/daily/todos")?;
+            let res = reqwest::get(url).await?;
+            res.json().await?
+        }
+        Some(cli::TodoTypes::Weekly) => {
+            let url = base_url.join("types/weekly/todos")?;
+            let res = reqwest::get(url).await?;
+            res.json().await?
+        }
+        Some(cli::TodoTypes::Periodic) => {
+            let url = base_url.join("types/daily/todos")?;
+            let res = reqwest::get(url).await?;
+            let mut todos: Vec<AideTodo> = res.json().await?;
+            let url = base_url.join("types/weekly/todos")?;
+            let res = reqwest::get(url).await?;
+            let mut temp_todos: Vec<AideTodo> = res.json().await?;
+            todos.append(&mut temp_todos);
+            todos
+        }
+        None => {
+            let url = base_url.join("todos")?;
+            let res = reqwest::get(url).await?;
+            res.json().await?
+        }
     };
     let temp_todos: Vec<&AideTodo> = if let Some(label) = opt.label {
         todos.iter().filter(|t| t.tags.contains(&label)).collect()
