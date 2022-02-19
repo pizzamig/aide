@@ -66,7 +66,7 @@ pub async fn replace_tag_id(todos: &mut [aide_proto::v1::todo::Todo], state: &Ha
     }
 }
 
-pub async fn get_tag_id<'a, 'b>(state: &HabiticaState, label: &str) -> Option<String> {
+pub async fn get_tag_id(state: &HabiticaState, label: &str) -> Option<String> {
     let cache = state.tag_cache.read().await;
     cache
         .iter()
