@@ -1,9 +1,9 @@
-use clap::{AppSettings, ArgEnum, ArgGroup, Parser, Subcommand};
+use clap::{ArgEnum, ArgGroup, Parser, Subcommand};
 use strum_macros::EnumString;
 
 #[derive(Parser, Clone)]
 #[clap(author, version, about)]
-#[clap(global_setting(AppSettings::PropagateVersion))]
+#[clap(propagate_version = true)]
 pub struct Opt {
     #[clap(short, long, arg_enum)]
     /// Optional parameter to get only one type of todos
