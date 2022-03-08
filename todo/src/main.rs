@@ -1,13 +1,13 @@
 mod cli;
 
-use aide_proto::v1::{ResultResponse, Todo as AideTodo};
+use aide_proto::v1::{todo::TodoTypes, ResultResponse, Todo as AideTodo};
 use clap::Parser;
 
 fn print_todo(t: &&AideTodo) {
     let type_symbol = match t.todo_type {
-        aide_proto::v1::todo::TodoTypes::Task => "[T]",
-        aide_proto::v1::todo::TodoTypes::Daily => "[D]",
-        aide_proto::v1::todo::TodoTypes::Weekly => "[W]",
+        TodoTypes::Task => "[T]",
+        TodoTypes::Daily => "[D]",
+        TodoTypes::Weekly => "[W]",
     };
     println!("{} {}", type_symbol, t.name);
     if !t.checklist.is_empty() {
@@ -37,8 +37,7 @@ fn get_todos_count(v: &[&AideTodo]) -> i32 {
     result
 }
 
-#[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let opt: cli::Opt = cli::Opt::parse();
     let base_url = reqwest::Url::parse(&format!(
         "{}://{}:{}/v1/",
@@ -57,21 +56,19 @@ async fn main() -> Result<(), anyhow::Error> {
                 use aide_proto::v1::todo::Label;
                 let label = Label { name: name.clone() };
                 let url = base_url.join("labels")?;
-                let client = reqwest::Client::new();
+                let client = reqwest::blocking::Client::new();
                 let _res: ResultResponse = client
                     .post(url)
                     .body(serde_json::to_string(&label)?)
-                    .send()
-                    .await?
-                    .json()
-                    .await?;
+                    .send()?
+                    .json()?;
                 return Ok(());
             } else {
                 assert!(delete);
                 let url_path = format!("labels/{name}");
                 let url = base_url.join(&url_path)?;
-                let client = reqwest::Client::new();
-                let _res: ResultResponse = client.delete(url).send().await?.json().await?;
+                let client = reqwest::blocking::Client::new();
+                let _res: ResultResponse = client.delete(url).send()?.json()?;
                 return Ok(());
             }
         }
@@ -79,33 +76,33 @@ async fn main() -> Result<(), anyhow::Error> {
     let todos: Vec<AideTodo> = match opt.todo_type {
         Some(cli::TodoTypes::Task) => {
             let url = base_url.join("types/task/todos")?;
-            let res = reqwest::get(url).await?;
-            res.json().await?
+            let res = reqwest::blocking::get(url)?;
+            res.json()?
         }
         Some(cli::TodoTypes::Daily) => {
             let url = base_url.join("types/daily/todos")?;
-            let res = reqwest::get(url).await?;
-            res.json().await?
+            let res = reqwest::blocking::get(url)?;
+            res.json()?
         }
         Some(cli::TodoTypes::Weekly) => {
             let url = base_url.join("types/weekly/todos")?;
-            let res = reqwest::get(url).await?;
-            res.json().await?
+            let res = reqwest::blocking::get(url)?;
+            res.json()?
         }
         Some(cli::TodoTypes::Periodic) => {
             let url = base_url.join("types/daily/todos")?;
-            let res = reqwest::get(url).await?;
-            let mut todos: Vec<AideTodo> = res.json().await?;
+            let res = reqwest::blocking::get(url)?;
+            let mut todos: Vec<AideTodo> = res.json()?;
             let url = base_url.join("types/weekly/todos")?;
-            let res = reqwest::get(url).await?;
-            let mut temp_todos: Vec<AideTodo> = res.json().await?;
+            let res = reqwest::blocking::get(url)?;
+            let mut temp_todos: Vec<AideTodo> = res.json()?;
             todos.append(&mut temp_todos);
             todos
         }
         None => {
             let url = base_url.join("todos")?;
-            let res = reqwest::get(url).await?;
-            res.json().await?
+            let res = reqwest::blocking::get(url)?;
+            res.json()?
         }
     };
     let temp_todos: Vec<&AideTodo> = if let Some(label) = opt.label {
