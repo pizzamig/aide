@@ -13,7 +13,7 @@ reqwest = { version = "0.11.9", features = ["default-tls", "gzip", "brotli", "js
 clap = { version = "3.1.5", features = ["derive"] }
 strum = "0.24"
 strum_macros = "0.24"
-anyhow = "1.0.55"
+anyhow = "1.0.56"
 
 [dependencies.aide-proto]
 path = "../aide-proto"
