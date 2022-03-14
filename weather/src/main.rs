@@ -2,17 +2,16 @@ mod cli;
 
 use clap::Parser;
 
-#[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let opt: cli::Opt = cli::Opt::parse();
     match opt.forecast {
-        cli::ForecastTypes::Current => current(opt).await?,
-        cli::ForecastTypes::Forecast => forecast(opt).await?,
-        cli::ForecastTypes::Rain => rain(opt).await?,
+        cli::ForecastTypes::Current => current(opt)?,
+        cli::ForecastTypes::Forecast => forecast(opt)?,
+        cli::ForecastTypes::Rain => rain(opt)?,
         cli::ForecastTypes::All => {
-            current(opt.clone()).await?;
-            forecast(opt.clone()).await?;
-            rain(opt).await?;
+            current(opt.clone())?;
+            forecast(opt.clone())?;
+            rain(opt)?;
         }
     };
     Ok(())
@@ -27,14 +26,14 @@ fn get_base_url(opt: &cli::Opt) -> Result<reqwest::Url, anyhow::Error> {
     Ok(base_url)
 }
 
-async fn current(opt: cli::Opt) -> Result<(), anyhow::Error> {
+fn current(opt: cli::Opt) -> Result<(), anyhow::Error> {
     let base_url = get_base_url(&opt)?;
     let url = match opt.location {
         Some(q) => base_url.join("current/")?.join(&q)?,
         None => base_url.join("current")?,
     };
-    let res = reqwest::get(url).await?;
-    let cw: aide_proto::v1::weather::CurrentWeather = res.json().await?;
+    let res = reqwest::blocking::get(url)?;
+    let cw: aide_proto::v1::weather::CurrentWeather = res.json()?;
     println!("{}", cw.location);
     println!("{}", cw.description);
     println!(
@@ -44,14 +43,14 @@ async fn current(opt: cli::Opt) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn forecast(opt: cli::Opt) -> Result<(), anyhow::Error> {
+fn forecast(opt: cli::Opt) -> Result<(), anyhow::Error> {
     let base_url = get_base_url(&opt)?;
     let url = match opt.location {
         Some(q) => base_url.join("forecast/")?.join(&q)?,
         None => base_url.join("forecast")?,
     };
-    let res = reqwest::get(url).await?;
-    let cf: aide_proto::v1::weather::Forecast = res.json().await?;
+    let res = reqwest::blocking::get(url)?;
+    let cf: aide_proto::v1::weather::Forecast = res.json()?;
     println!("{}", cf.location);
     println!("{}\t{}", cf.time, cf.description);
     println!(
@@ -61,14 +60,14 @@ async fn forecast(opt: cli::Opt) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn rain(opt: cli::Opt) -> Result<(), anyhow::Error> {
+fn rain(opt: cli::Opt) -> Result<(), anyhow::Error> {
     let base_url = get_base_url(&opt)?;
     let url = match opt.location {
         Some(q) => base_url.join("hourrainforecast/")?.join(&q)?,
         None => base_url.join("hourrainforecast")?,
     };
-    let res = reqwest::get(url).await?;
-    let rf: aide_proto::v1::weather::RainForecast = res.json().await?;
+    let res = reqwest::blocking::get(url)?;
+    let rf: aide_proto::v1::weather::RainForecast = res.json()?;
     println!("{}", rf.location);
 
     if rf.hour_rain_forecast.is_empty() {
