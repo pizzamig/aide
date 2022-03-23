@@ -31,7 +31,7 @@ pub fn draw_list<B: Backend, T: ToStringVec + ToListState>(f: &mut Frame<B>, obj
     f.render_stateful_widget(list, f.size(), &mut object.to_state())
 }
 
-pub fn tui_setup() -> Result<Terminal<impl Backend>, std::io::Error> {
+pub fn tui_setup() -> Result<Terminal<impl Backend + Write>, std::io::Error> {
     enable_raw_mode()?;
     let stdout = std::io::stdout();
     let backend = CrosstermBackend::new(stdout);
