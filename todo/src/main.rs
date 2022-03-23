@@ -178,12 +178,7 @@ fn todo_to_one_line(t: &&AideTodo) -> String {
 }
 
 fn todo_to_multi_line(t: &&AideTodo) -> String {
-    let type_symbol = match t.todo_type {
-        TodoTypes::Task => "[T]",
-        TodoTypes::Daily => "[D]",
-        TodoTypes::Weekly => "[W]",
-    };
-    let mut result = format!("{} {}\n", type_symbol, t.name);
+    let mut result = todo_to_one_line(t);
 
     if !t.checklist.is_empty() {
         t.checklist
