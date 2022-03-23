@@ -11,6 +11,8 @@ pub struct Opt {
     /// Specify labels
     #[clap(short, long)]
     pub label: Option<String>,
+    #[clap(short = 'T', long)]
+    pub tui: bool,
     #[clap(flatten)]
     pub common_opt: aide_common::CliCommonOpt,
     #[clap(subcommand)]
