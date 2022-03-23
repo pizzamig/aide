@@ -129,7 +129,7 @@ fn tui_todo(v: &[&AideTodo]) -> Result<(), anyhow::Error> {
         return Ok(());
     }
     let mut state = 0;
-    let mut terminal = tui::tui_init()?;
+    let mut terminal = aide_common::tui::tui_setup()?;
     loop {
         // draw list
         let items: Vec<ListItem> = v
@@ -164,7 +164,7 @@ fn tui_todo(v: &[&AideTodo]) -> Result<(), anyhow::Error> {
             }
         }
     }
-    tui::tui_teardown(&mut terminal)?;
+    aide_common::tui::tui_teardown(&mut terminal)?;
     Ok(())
 }
 
