@@ -1,6 +1,4 @@
 mod cli;
-mod tui;
-use ::tui::widgets::{Block, Borders, List, ListItem, ListState};
 use aide_proto::v1::{todo::TodoTypes, ResultResponse, Todo as AideTodo};
 use clap::Parser;
 use crossterm::event::{Event, KeyCode};
@@ -123,48 +121,66 @@ fn get_todos_count(v: &[&AideTodo]) -> i32 {
     result
 }
 
+struct TodoStatefulList<'a> {
+    todo_list: &'a [&'a AideTodo],
+    state: usize,
+}
+
+impl<'a> TodoStatefulList<'a> {
+    fn new(todo_list: &'a [&'a AideTodo], state: usize) -> Self {
+        Self { todo_list, state }
+    }
+}
+
+impl<'a> aide_common::tui::ToStringVec for TodoStatefulList<'a> {
+    fn to_string_vec(&self) -> Vec<String> {
+        self.todo_list
+            .iter()
+            .enumerate()
+            .map(|(i, t)| {
+                if i != self.state {
+                    todo_to_one_line(t)
+                } else {
+                    todo_to_multi_line(t)
+                }
+            })
+            .collect()
+    }
+}
+impl<'a> aide_common::tui::ToListState for TodoStatefulList<'a> {
+    fn to_state(&self) -> tui::widgets::ListState {
+        let mut result = tui::widgets::ListState::default();
+        result.select(Some(self.state));
+        result
+    }
+}
+
 fn tui_todo(v: &[&AideTodo]) -> Result<(), anyhow::Error> {
     if v.is_empty() {
         println!("There are no todos!");
         return Ok(());
     }
-    let mut state = 0;
-    let mut terminal = tui::tui_init()?;
+    let mut widget = TodoStatefulList::new(v, 0);
+    let mut terminal = aide_common::tui::tui_setup()?;
     loop {
         // draw list
-        let items: Vec<ListItem> = v
-            .iter()
-            .enumerate()
-            .map(|(i, t)| {
-                if i != state {
-                    ListItem::new(todo_to_one_line(t))
-                } else {
-                    ListItem::new(todo_to_multi_line(t))
-                }
-            })
-            .collect();
-        let widget = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("Todo"))
-            .highlight_symbol(">> ");
-        let mut list_state = ListState::default();
-        list_state.select(Some(state));
-        terminal.draw(|f| f.render_stateful_widget(widget, f.size(), &mut list_state))?;
+        terminal.draw(|f| aide_common::tui::draw_list(f, &mut widget))?;
         if let Event::Key(key) = crossterm::event::read()? {
             match key.code {
                 KeyCode::Char('q') => break,
-                KeyCode::Down => state = (state + 1) % v.len(),
+                KeyCode::Down => widget.state = (widget.state + 1) % v.len(),
                 KeyCode::Up => {
-                    if state == 0 {
-                        state = v.len() - 1;
+                    if widget.state == 0 {
+                        widget.state = widget.todo_list.len() - 1;
                     } else {
-                        state -= 1;
+                        widget.state -= 1;
                     }
                 }
                 _ => (),
             }
         }
     }
-    tui::tui_teardown(&mut terminal)?;
+    aide_common::tui::tui_teardown(&mut terminal)?;
     Ok(())
 }
 
@@ -178,13 +194,8 @@ fn todo_to_one_line(t: &&AideTodo) -> String {
 }
 
 fn todo_to_multi_line(t: &&AideTodo) -> String {
-    let type_symbol = match t.todo_type {
-        TodoTypes::Task => "[T]",
-        TodoTypes::Daily => "[D]",
-        TodoTypes::Weekly => "[W]",
-    };
-    let mut result = format!("{} {}\n", type_symbol, t.name);
-
+    let mut result = todo_to_one_line(t);
+    result.push('\n');
     if !t.checklist.is_empty() {
         t.checklist
             .iter()
