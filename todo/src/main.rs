@@ -1,9 +1,9 @@
 mod cli;
-mod tui;
-use ::tui::widgets::{Block, Borders, List, ListItem, ListState};
+
 use aide_proto::v1::{todo::TodoTypes, ResultResponse, Todo as AideTodo};
 use clap::Parser;
 use crossterm::event::{Event, KeyCode};
+use tui::widgets::{Block, Borders, List, ListItem, ListState};
 
 fn main() -> Result<(), anyhow::Error> {
     let opt: cli::Opt = cli::Opt::parse();
