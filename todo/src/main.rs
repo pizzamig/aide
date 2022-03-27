@@ -155,6 +155,11 @@ impl<'a> aide_common::tui::ToListState for TodoStatefulList<'a> {
     }
 }
 
+impl<'a> aide_common::tui::GetTitle for TodoStatefulList<'a> {
+    fn get_title(&self) -> &str {
+        "Todo"
+    }
+}
 fn tui_todo(v: &[&AideTodo]) -> Result<(), anyhow::Error> {
     if v.is_empty() {
         println!("There are no todos!");
