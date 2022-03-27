@@ -3,7 +3,10 @@ use std::io::Write;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, is_raw_mode_enabled, EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -20,11 +23,22 @@ pub trait ToListState {
     fn to_state(&self) -> ListState;
 }
 
-pub fn draw_list<B: Backend, T: ToStringVec + ToListState>(f: &mut Frame<B>, object: &mut T) {
+pub trait GetTitle {
+    fn get_title(&self) -> &str;
+}
+
+pub fn draw_list<B: Backend, T: ToStringVec + ToListState + GetTitle>(
+    f: &mut Frame<B>,
+    object: &mut T,
+) {
     let sv = object.to_string_vec();
     let list = sv
         .to_list()
-        .block(Block::default().title("List").borders(Borders::ALL))
+        .block(
+            Block::default()
+                .title(object.get_title())
+                .borders(Borders::ALL),
+        )
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
         .highlight_symbol(">> ");
@@ -36,22 +50,29 @@ pub fn tui_setup() -> Result<Terminal<impl Backend + Write>, std::io::Error> {
     let stdout = std::io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    execute!(
+    if let Err(e) = execute!(
         terminal.backend_mut(),
         EnterAlternateScreen,
         EnableMouseCapture
-    )?;
-    Ok(terminal)
+    ) {
+        tui_teardown(&mut terminal).unwrap_or(());
+        Err(e)
+    } else {
+        Ok(terminal)
+    }
 }
 
 pub fn tui_teardown<B: Backend + Write>(terminal: &mut Terminal<B>) -> Result<(), std::io::Error> {
-    disable_raw_mode()?;
+    if is_raw_mode_enabled()? {
+        disable_raw_mode()?;
+    }
     // leave the alternate screen, restoring the original terminal
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture
-    )?;
+    )
+    .unwrap_or(());
 
     terminal.show_cursor()?;
     Ok(())

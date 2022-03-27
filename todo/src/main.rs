@@ -155,13 +155,33 @@ impl<'a> aide_common::tui::ToListState for TodoStatefulList<'a> {
     }
 }
 
+impl<'a> aide_common::tui::GetTitle for TodoStatefulList<'a> {
+    fn get_title(&self) -> &str {
+        "Todo"
+    }
+}
 fn tui_todo(v: &[&AideTodo]) -> Result<(), anyhow::Error> {
     if v.is_empty() {
         println!("There are no todos!");
         return Ok(());
     }
-    let mut widget = TodoStatefulList::new(v, 0);
     let mut terminal = aide_common::tui::tui_setup()?;
+    if let Err(e) = tui_todo_internal(v, &mut terminal) {
+        aide_common::tui::tui_teardown(&mut terminal).unwrap_or(());
+        return Err(e);
+    }
+    aide_common::tui::tui_teardown(&mut terminal)?;
+    Ok(())
+}
+
+use std::io::Write;
+use tui::{backend::Backend, Terminal};
+
+fn tui_todo_internal(
+    v: &[&AideTodo],
+    terminal: &mut Terminal<impl Backend + Write>,
+) -> Result<(), anyhow::Error> {
+    let mut widget = TodoStatefulList::new(v, 0);
     loop {
         // draw list
         terminal.draw(|f| aide_common::tui::draw_list(f, &mut widget))?;
@@ -180,7 +200,6 @@ fn tui_todo(v: &[&AideTodo]) -> Result<(), anyhow::Error> {
             }
         }
     }
-    aide_common::tui::tui_teardown(&mut terminal)?;
     Ok(())
 }
 
@@ -193,6 +212,7 @@ fn todo_to_one_line(t: &&AideTodo) -> String {
     format!("{} {}", type_symbol, t.name)
 }
 
+const INDENTATION: &str = "  ";
 fn todo_to_multi_line(t: &&AideTodo) -> String {
     let mut result = todo_to_one_line(t);
     result.push('\n');
@@ -200,10 +220,22 @@ fn todo_to_multi_line(t: &&AideTodo) -> String {
         t.checklist
             .iter()
             .filter(|c| !c.done)
-            .for_each(|c| result.push_str(&format!("\t\t[] {}\n", c.name)));
+            .for_each(|c| result.push_str(&format!("{INDENTATION}[] {}\n", c.name)));
     }
     if t.due_date.is_some() {
-        result.push_str(&format!("\tdue date: {}\n", t.due_date.to_owned().unwrap()));
+        result.push_str(&format!(
+            "{INDENTATION}due date: {}\n",
+            t.due_date.to_owned().unwrap()
+        ));
+    }
+    if !t.tags.is_empty() {
+        result.push_str(&format!("{INDENTATION}labels: "));
+        t.tags
+            .iter()
+            .for_each(|l| result.push_str(&format!("{l}, ")));
+        result.pop().unwrap();
+        result.pop().unwrap();
+        result.push('\n');
     }
     result
 }
