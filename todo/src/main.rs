@@ -165,8 +165,23 @@ fn tui_todo(v: &[&AideTodo]) -> Result<(), anyhow::Error> {
         println!("There are no todos!");
         return Ok(());
     }
-    let mut widget = TodoStatefulList::new(v, 0);
     let mut terminal = aide_common::tui::tui_setup()?;
+    if let Err(e) = tui_todo_internal(v, &mut terminal) {
+        aide_common::tui::tui_teardown(&mut terminal).unwrap_or(());
+        return Err(e);
+    }
+    aide_common::tui::tui_teardown(&mut terminal)?;
+    Ok(())
+}
+
+use std::io::Write;
+use tui::{backend::Backend, Terminal};
+
+fn tui_todo_internal(
+    v: &[&AideTodo],
+    terminal: &mut Terminal<impl Backend + Write>,
+) -> Result<(), anyhow::Error> {
+    let mut widget = TodoStatefulList::new(v, 0);
     loop {
         // draw list
         terminal.draw(|f| aide_common::tui::draw_list(f, &mut widget))?;
@@ -185,7 +200,6 @@ fn tui_todo(v: &[&AideTodo]) -> Result<(), anyhow::Error> {
             }
         }
     }
-    aide_common::tui::tui_teardown(&mut terminal)?;
     Ok(())
 }
 
