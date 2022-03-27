@@ -20,11 +20,22 @@ pub trait ToListState {
     fn to_state(&self) -> ListState;
 }
 
-pub fn draw_list<B: Backend, T: ToStringVec + ToListState>(f: &mut Frame<B>, object: &mut T) {
+pub trait GetTitle {
+    fn get_title(&self) -> &str;
+}
+
+pub fn draw_list<B: Backend, T: ToStringVec + ToListState + GetTitle>(
+    f: &mut Frame<B>,
+    object: &mut T,
+) {
     let sv = object.to_string_vec();
     let list = sv
         .to_list()
-        .block(Block::default().title("List").borders(Borders::ALL))
+        .block(
+            Block::default()
+                .title(object.get_title())
+                .borders(Borders::ALL),
+        )
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().add_modifier(Modifier::ITALIC))
         .highlight_symbol(">> ");
