@@ -193,6 +193,7 @@ fn todo_to_one_line(t: &&AideTodo) -> String {
     format!("{} {}", type_symbol, t.name)
 }
 
+const INDENTATION: &str = "  ";
 fn todo_to_multi_line(t: &&AideTodo) -> String {
     let mut result = todo_to_one_line(t);
     result.push('\n');
@@ -200,10 +201,22 @@ fn todo_to_multi_line(t: &&AideTodo) -> String {
         t.checklist
             .iter()
             .filter(|c| !c.done)
-            .for_each(|c| result.push_str(&format!("\t\t[] {}\n", c.name)));
+            .for_each(|c| result.push_str(&format!("{INDENTATION}[] {}\n", c.name)));
     }
     if t.due_date.is_some() {
-        result.push_str(&format!("\tdue date: {}\n", t.due_date.to_owned().unwrap()));
+        result.push_str(&format!(
+            "{INDENTATION}due date: {}\n",
+            t.due_date.to_owned().unwrap()
+        ));
+    }
+    if !t.tags.is_empty() {
+        result.push_str(&format!("{INDENTATION}labels: "));
+        t.tags
+            .iter()
+            .for_each(|l| result.push_str(&format!("{l}, ")));
+        result.pop().unwrap();
+        result.pop().unwrap();
+        result.push('\n');
     }
     result
 }
