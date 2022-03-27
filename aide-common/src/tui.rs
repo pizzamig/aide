@@ -3,7 +3,10 @@ use std::io::Write;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, is_raw_mode_enabled, EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
 };
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -47,22 +50,29 @@ pub fn tui_setup() -> Result<Terminal<impl Backend + Write>, std::io::Error> {
     let stdout = std::io::stdout();
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    execute!(
+    if let Err(e) = execute!(
         terminal.backend_mut(),
         EnterAlternateScreen,
         EnableMouseCapture
-    )?;
-    Ok(terminal)
+    ) {
+        tui_teardown(&mut terminal).unwrap_or(());
+        Err(e)
+    } else {
+        Ok(terminal)
+    }
 }
 
 pub fn tui_teardown<B: Backend + Write>(terminal: &mut Terminal<B>) -> Result<(), std::io::Error> {
-    disable_raw_mode()?;
+    if is_raw_mode_enabled()? {
+        disable_raw_mode()?;
+    }
     // leave the alternate screen, restoring the original terminal
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture
-    )?;
+    )
+    .unwrap_or(());
 
     terminal.show_cursor()?;
     Ok(())
